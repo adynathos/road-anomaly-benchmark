@@ -16,24 +16,22 @@ The sequences explore challengine circumstances rarely seen in existing datasets
 * night, with street-laps
 
 
-
 #### Location 1 - Snowstorm
 
 <figure>
-	<img src="RoadObstaclesV2/loc1_storm.webp" />
-	<img src="RoadObstaclesV2/loc1_obstacle.webp" />
+	<img src="RoadObstaclesV2/loc1_storm.jpg" /><img src="RoadObstaclesV2/loc1_obstacle.jpg" />
 </figure>
 
 #### Location 1 - Water on camera
 
 <figure>
-	<img src="RoadObstaclesV2/loc1_water_on_camera.webp" />
+	<img src="RoadObstaclesV2/loc1_water_on_camera.jpg" />
 </figure>
 
 #### Location 2 - Night
 
 <figure>
-	<img src="RoadObstaclesV2/loc2_dir1.webp" /><img src="RoadObstaclesV2/loc2_return.webp" />
+	<img src="RoadObstaclesV2/loc2_dir1.jpg" /><img src="RoadObstaclesV2/loc2_return.jpg" />
 </figure>
 
 #### Empty road
@@ -41,5 +39,5 @@ The sequences explore challengine circumstances rarely seen in existing datasets
 We also collect sequences of empty road, as a test of false-positives or for training.
 
 <figure>
-	<img src="RoadObstaclesV2/loc1_empty.webp" /><img src="RoadObstaclesV2/loc2_empty.webp" />
+	<img src="RoadObstaclesV2/loc1_empty.jpg" /><img src="RoadObstaclesV2/loc2_empty.jpg" />
 </figure>
