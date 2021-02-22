@@ -2,6 +2,7 @@
 from pathlib import Path
 from operator import itemgetter
 from easydict import EasyDict
+import h5py
 from ..jupyter_show_image import imread, imwrite
 
 class ChannelLoader:
@@ -70,6 +71,41 @@ class ChannelLoaderImage(ChannelLoaderFileCollection):
 		imwrite(path, data)
 
 
+class ChannelLoaderHDF5(ChannelLoaderFileCollection):
+	def __init__(self, file_path_tmpl=None, var_name='value', compression=None):
+		super().__init__(file_path_tmpl)
+		self.var_name = var_name
+		self.compression = compression
+
+	@staticmethod
+	def read_hdf5_variable(variable):
+		if variable.shape.__len__() > 0:
+			return variable[:]
+		else:
+			return variable
+
+	def read_file(self, path):
+		var_name = self.var_name
+
+		with h5py.File(path, 'r') as hdf5_file_handle:
+			try:
+				return self.read_hdf5_variable(hdf5_file_handle[var_name])
+			except KeyError as e:
+				raise KeyError(f'Failed to read {var_name} from handle with keys {hdf5_file_handle.keys()}: {e}')
+		
+	def write_file(self, path, data):
+		var_name = self.var_name
+
+		path = Path(path)
+		path.parent.mkdir(exist_ok=True, parents=True)
+
+		with h5py.File(path, 'w') as hdf5_file_handle:
+			if var_name in hdf5_file_handle:
+				hdf5_file_handle[var_name][:] = data
+			else:
+				hdf5_file_handle.create_dataset(var_name, data=data, compression=self.compression)
+
+
 class DatasetBase:
 
 	def __init__(self, cfg):
@@ -88,7 +124,7 @@ class DatasetBase:
 		else:
 			fr = self.frames_by_fid[idx_or_fid]
 		
-		out_fr = EasyDict(fr)
+		out_fr = EasyDict(fr, dset_name = self.cfg.name)
 
 		for ch_name, ch_obj in self.channels.items():
 			out_fr[ch_name] = ch_obj.read(dset=self, **fr)
