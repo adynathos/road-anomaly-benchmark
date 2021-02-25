@@ -14,7 +14,10 @@ DIR_OUTPUTS = Path(environ.get('DIR_OUTPUTS', DIR_SRC / 'outputs'))
 class Evaluation:
 
 	channels = {
-		'anomaly_p': ChannelLoaderHDF5(str(DIR_OUTPUTS / "anomaly_p/{method_name}/{dset_name}/{fid}.hdf5")),
+		'anomaly_p': ChannelLoaderHDF5(
+			str(DIR_OUTPUTS / "anomaly_p/{method_name}/{dset_name}/{fid}.hdf5"),
+			compression = 9,
+		),
 	}
 
 	threads = None
@@ -26,6 +29,9 @@ class Evaluation:
 		if threaded_saver:
 			self.threads = ThreadPoolExecutor(num_workers)
 
+	def get_dataset(self):
+		return DatasetRegistry.get(self.dataset_name)
+
 	def save_output(self, frame, anomaly_p):
 		value = anomaly_p.astype(np.float16)
 
@@ -34,6 +40,7 @@ class Evaluation:
 		kw = dict(method_name = self.method_name, **frame)
 
 		if self.threads is not None:
+			# TODO log errors from thread
 			self.threads.submit(f, *a, **kw)
 		else:
 			f(*a, **kw)
