@@ -64,3 +64,31 @@ class DatasetObstacleTrack(DatasetRA):
 		fids = [p.stem for p in (self.cfg.dir_root / 'images').glob('*.jpg')]
 		self.set_frames([EasyDict(fid=fid) for fid in fids])
 
+
+@DatasetRegistry.register_class()
+class DatasetWeather(DatasetRA):
+
+	configs = [
+		dict(
+			name = 'RoadObstacleWeather-v1',
+			dir_root = Path(environ.get('DIR_DATASETS', DIR_SRC / 'datasets')) / 'dataset_RoadAnomalyWeather_v1',
+			# classes = dict(
+			# 	road = 253,
+			# 	obstacle = 254,
+			# 	ignore = 0,
+			# )
+		),
+	]
+
+	channels = {
+		'image': ChannelLoaderImage("{dset.cfg.dir_root}/images/{fid}.jpg"),
+		#'semantic_class_gt': ChannelLoaderImage("{dset.cfg.dir_root}/labels_masks/{fid}_labels_semantic.png"),
+	}
+
+	def __init__(self, cfg):
+		super().__init__(cfg)
+
+		fids = [p.stem for p in (self.cfg.dir_root / 'images').glob('*.jpg')]
+		self.set_frames([EasyDict(fid=fid) for fid in fids])
+
+
