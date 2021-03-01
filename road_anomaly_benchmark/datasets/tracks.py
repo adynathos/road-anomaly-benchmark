@@ -78,6 +78,10 @@ class DatasetWeather(DatasetRA):
 			# 	ignore = 0,
 			# )
 		),
+		dict(
+			name = 'RoadObstacleExtra-v1',
+			dir_root = Path(environ.get('DIR_DATASETS', DIR_SRC / 'datasets')) / 'dataset_RoadObstacleExtra',
+		),
 	]
 
 	channels = {
