@@ -71,7 +71,7 @@ class DatasetWeather(DatasetRA):
 	configs = [
 		dict(
 			name = 'RoadObstacleWeather-v1',
-			dir_root = Path(environ.get('DIR_DATASETS', DIR_SRC / 'datasets')) / 'dataset_RoadAnomalyWeather_v1',
+			dir_root = Path(environ.get('DIR_DATASETS', DIR_SRC / 'datasets')) / 'dataset_RoadObstacleWeather_v1',
 			# classes = dict(
 			# 	road = 253,
 			# 	obstacle = 254,
