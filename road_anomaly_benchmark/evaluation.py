@@ -4,6 +4,7 @@ from os import environ
 from concurrent.futures import ThreadPoolExecutor
 
 import numpy as np
+from tqdm import tqdm
 
 from . import DIR_SRC
 from .datasets import DatasetRegistry
@@ -47,9 +48,25 @@ class Evaluation:
 
 		# self.channels['anomaly_p'].write(value, method_name = self.method_name, **frame)
 	
-	# def save_frame_list_threaded(self, frame_list, anomaly_key = 'anomaly_p', num_workers=8):
-	# 	self.threads = ThreadPoolExecutor(num_workers)
-	
+	def calculate_metric_from_saved_outputs(self, metric):
+
+		fr_results = []
+
+		for fr in tqdm(self.get_dataset()):
+			fr_result = metric.process_frame(
+				anomaly_p = self.channels['anomaly_p'].read(
+					method_name = self.method_name, 
+					dset_name = fr.dset_name,
+					fid = fr.fid,
+				),
+				method_name = self.method_name, 
+				**fr,
+			)
+			fr_results.append(fr_result)
+
+		return metric.aggregate(fr_results)
+
+
 	def wait_to_finish_saving(self):
 		if self.threads is not None:
 			self.threads.shutdown(True)
