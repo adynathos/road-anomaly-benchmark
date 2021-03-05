@@ -113,12 +113,16 @@ class DatasetBase:
 		self.frames = []
 		self.frames_by_fid = {}
 
+	@property
+	def name(self):
+		return self.cfg.name
+
 	def set_frames(self, frame_list):
 		self.frames = list(frame_list)
 		self.frames.sort(key = itemgetter('fid'))
 		self.frames_by_fid = {fr['fid']: fr for fr in self.frames}
 
-	def __getitem__(self, idx_or_fid):
+	def get_frame(self, idx_or_fid, *channels):
 		if isinstance(idx_or_fid, int):
 			fr = self.frames[idx_or_fid]
 		else:
@@ -126,18 +130,28 @@ class DatasetBase:
 		
 		out_fr = EasyDict(fr, dset_name = self.cfg.name)
 
-		for ch_name, ch_obj in self.channels.items():
-			out_fr[ch_name] = ch_obj.read(dset=self, **fr)
+		channels = channels or self.channels.keys()
+
+		for ch_name in channels:
+			out_fr[ch_name] = self.channels[ch_name].read(dset=self, **fr)
 
 		return out_fr
+
+	def iter(self, *channels):
+		"""
+		Iterate over frames but only load a subset of channels. For example:
+			for fr in dset.iter('image'):
+				process(fr.image)
+		"""
+		for idx in range(self.__len__()):
+			yield self.get_frame(idx, *channels)
+
+	def __getitem__(self, idx_or_fid):
+		return self.get_frame(idx_or_fid)
 
 	def __len__(self):
 		return self.frames.__len__()
 
 	def __iter__(self):
-		for idx in range(self.__len__()):
-			yield self[idx]
-
-
-
+		return self.iter()
 
