@@ -48,11 +48,22 @@ class Evaluation:
 
 		# self.channels['anomaly_p'].write(value, method_name = self.method_name, **frame)
 	
-	def calculate_metric_from_saved_outputs(self, metric):
+	def calculate_metric_from_saved_outputs(self, metric, sample=None):
+		# TODO sample is part of evaluation
 
 		fr_results = []
 
-		for fr in tqdm(self.get_dataset()):
+		if sample is not None:
+			dset_name, frame_indices = sample
+
+			ds = DatasetRegistry.get(dset_name)
+			fr_iterable = (ds[i] for i in frame_indices)
+			fr_iterable_len = frame_indices.__len__()
+		else:
+			fr_iterable = self.get_dataset()
+			fr_iterable_len = fr_iterable.__len__()
+
+		for fr in tqdm(fr_iterable, total=fr_iterable_len):
 			fr_result = metric.process_frame(
 				anomaly_p = self.channels['anomaly_p'].read(
 					method_name = self.method_name, 
@@ -64,7 +75,11 @@ class Evaluation:
 			)
 			fr_results.append(fr_result)
 
-		return metric.aggregate(fr_results)
+		return metric.aggregate(
+			fr_results,
+			method_name = self.method_name,
+			dataset_name = self.dataset_name,
+		)
 
 
 	def wait_to_finish_saving(self):
