@@ -1,7 +1,9 @@
 
 from pathlib import Path
 from os import environ
+from functools import partial
 from concurrent.futures import ThreadPoolExecutor
+import logging
 
 import numpy as np
 from tqdm import tqdm
@@ -10,7 +12,10 @@ from . import DIR_SRC
 from .datasets import DatasetRegistry
 from .datasets.dataset_io import ChannelLoaderHDF5
 
+log = logging.getLogger(__name__)
+
 DIR_OUTPUTS = Path(environ.get('DIR_OUTPUTS', DIR_SRC / 'outputs'))
+
 
 class Evaluation:
 
@@ -33,18 +38,29 @@ class Evaluation:
 	def get_dataset(self):
 		return DatasetRegistry.get(self.dataset_name)
 
+	@staticmethod
+	def write_task(channel, value, extra):
+		try:
+			channel.write(value, **extra)
+		except Exception as e:
+			log.exception('In writing result')
+			raise e
+
+
 	def save_output(self, frame, anomaly_p):
 		value = anomaly_p.astype(np.float16)
 
-		f = self.channels['anomaly_p'].write
-		a = (value,)
-		kw = dict(method_name = self.method_name, **frame)
+		write_func = partial(
+			self.write_task, 
+			self.channels['anomaly_p'], 
+			value, 
+			dict(method_name = self.method_name, **frame),
+		)
 
 		if self.threads is not None:
-			# TODO log errors from thread
-			self.threads.submit(f, *a, **kw)
+			self.threads.submit(write_func)
 		else:
-			f(*a, **kw)
+			write_func()
 
 		# self.channels['anomaly_p'].write(value, method_name = self.method_name, **frame)
 	

@@ -1,9 +1,13 @@
  
 from pathlib import Path
 from operator import itemgetter
+import logging
+
 from easydict import EasyDict
 import h5py
 from ..jupyter_show_image import imread, imwrite
+
+log = logging.getLogger(__name__)
 
 class ChannelLoader:
 	def read(self, **frame):
