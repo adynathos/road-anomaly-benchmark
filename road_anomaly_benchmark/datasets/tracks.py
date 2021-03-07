@@ -1,6 +1,7 @@
 
 from pathlib import Path
 from os import environ
+from operator import itemgetter
 import logging, re
 
 from easydict import EasyDict
@@ -242,10 +243,12 @@ class DatasetLostAndFound(DatasetRA):
 			self.laf_id_from_image_path(p)
 			for p in img_files
 		]
-
+		frames.sort(key = itemgetter('fid'))
+		
 		# remove invalid labeled frames
 		invalid_indices = self.cfg.invalid_labeled_frames
 		valid_indices = np.delete(np.arange(frames.__len__()), invalid_indices)
+		#print('\n '.join([frames[i].fid for i in invalid_indices]))
 		frames = [frames[i] for i in valid_indices]
 
 		self.set_frames(frames)
