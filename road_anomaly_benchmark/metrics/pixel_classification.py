@@ -1,52 +1,23 @@
 
-import dataclasses
-from math import ceil
-from typing import List, Dict
+from typing import List, Literal
+from pathlib import Path
 
 import numpy as np
 from matplotlib import pyplot
 from easydict import EasyDict
 
-from .base import EvaluationMetric
+from .base import EvaluationMetric, MetricRegistry, save_figure, save_table
+from .pixel_classification_curves import BinaryClassificationCurve, curves_from_cmats, plot_classification_curves, reduce_curve_resolution
+
 from ..evaluation import DIR_OUTPUTS
 from ..jupyter_show_image import adapt_img_data, imwrite
 
-from pandas import DataFrame, Series
-from operator import attrgetter
 
-@dataclasses.dataclass
-class BinaryClassificationCurve:
-	method_name : str
-	dataset_name : str
-#	display_name : str = ''
-
-	area_PRC : float
-	curve_recall : np.ndarray
-	curve_precision : np.ndarray
-
-	area_ROC : float
-	curve_tpr : np.ndarray
-	curve_fpr : np.ndarray
-
-	# TODO thresholds?
-
-	fpr_at_95_tpr : float = -1
-	threshold_at_95_tpr : float = -1
-
-	IOU_at_05: float = float('nan')
-	PDR_at_05: float = float('nan')
-
-	def __iter__(self):
-		return dataclasses.asdict(self).items()
-
-	def save(self, path):
-		hdf5_write_hierarchy_to_file(path, dataclasses.asdict(self))
-
-	@classmethod
-	def from_file(cls, path):
-		return cls(**hdf5_read_hierarchy_from_file(path))
-
-def binary_confusion_matrix(prob, gt_label_bool, num_bins=1024, normalize=False, dtype=np.float64):
+def binary_confusion_matrix(
+		prob : np.ndarray, gt_label_bool : np.ndarray, 
+		num_bins : int = 1024, bin_strategy : Literal['uniform', 'percentiles'] = 'uniform',
+		normalize : bool = False, dtype = np.float64):
+	
 	area = gt_label_bool.__len__()
 
 	gt_area_true = np.count_nonzero(gt_label_bool)
@@ -55,23 +26,54 @@ def binary_confusion_matrix(prob, gt_label_bool, num_bins=1024, normalize=False,
 	prob_at_true = prob[gt_label_bool]
 	prob_at_false = prob[~gt_label_bool]
 
-	bins = np.linspace(0, 1, num_bins+1)
+	if bin_strategy == 'uniform':
+		# bins spread uniforms in 0 .. 1
+		bins = num_bins
+		histogram_range = [0, 1]
 
-	# TODO dynamic bins
-	# - bins spread uniforms in 0 .. 1
-	#	np.linspace(0, 1, ceil(levels*0.5))
-	# - bins aligned to percentiles
-	# 	np.quantile(prob, np.linspae(0, 1, levels//2))
+	elif bin_strategy == 'percentiles':
+		# dynamic bins representing the range of occurring values
+		# bin edges are following the distribution of positive and negative pixels
 
+		# need num_bins+1 edges
+		if num_bins % 2 == 0:
+			b1 = num_bins//2
+			b2 = b1 + 1
+		else:
+			b1 = b2 = num_bins//2+1
 
-	tp_rel, _ = np.histogram(prob_at_true, bins=bins, range=[0, 1])
+		bins = np.concatenate([
+			np.quantile(prob_at_true, np.linspace(0, 1, b1)),
+			np.quantile(prob_at_true, np.linspace(0, 1, b2)),
+		])
+		
+		# sort and remove duplicates, duplicated cause an exception in np.histogram
+		bins = np.unique(bins)
+		
 
-	tp = np.cumsum(tp_rel[::-1])
+		histogram_range = None
+
+	# the area of positive pixels is divided into
+	#	- true positives - above threshold
+	#	- false negatives - below threshold
+	tp_rel, _ = np.histogram(prob_at_true, bins=bins, range=histogram_range)
+	# the curve goes from higher thresholds to lower thresholds
+	tp_rel = tp_rel[::-1]
+	# cumsum to get number of tp at given threshold
+	tp = np.cumsum(tp_rel)
+	# GT-positives which are not TP are instead FN
 	fn = gt_area_true - tp
 
-	fp_rel, _ = np.histogram(prob_at_false, bins=bins, range=[0, 1])
-
-	fp = np.cumsum(fp_rel[::-1])
+	# the area of negative pixels is divided into
+	#	- false positives - above threshold
+	#	- true negatives - below threshold
+	fp_rel, bin_edges = np.histogram(prob_at_false, bins=bins, range=histogram_range)
+	# the curve goes from higher thresholds to lower thresholds
+	bin_edges = bin_edges[::-1]
+	fp_rel = fp_rel[::-1]
+	# cumsum to get number of fp at given threshold
+	fp = np.cumsum(fp_rel)
+	# GT-negatives which are not FP are instead TN
 	tn = gt_area_false - fp
 
 	cmat_sum = np.array([
@@ -79,19 +81,21 @@ def binary_confusion_matrix(prob, gt_label_bool, num_bins=1024, normalize=False,
 		[fn, tn],
 	]).transpose(2, 0, 1).astype(dtype)
 
-	cmat_rel = np.array([
-		[tp_rel, -fp_rel],
-		[-tp_rel, fp_rel],
-	]).transpose(2, 0, 1).astype(dtype)
+	# cmat_rel = np.array([
+	# 	[tp_rel, fp_rel],
+	# 	[-tp_rel, -fp_rel],
+	# ]).transpose(2, 0, 1).astype(dtype)
 	
 	if normalize:
 		cmat_sum *= (1./area)
-		cmat_rel *= (1./area)
+		# cmat_rel *= (1./area)
 
 	return EasyDict(
-		bins = bins,
+		bin_edges = bin_edges,
 		cmat_sum = cmat_sum,
-		cmat_rel = cmat_rel,
+		# cmat_rel = cmat_rel,
+		tp_rel = tp_rel,
+		fp_rel = fp_rel,
 		num_pos = gt_area_true,
 		num_neg = gt_area_false,
 	)
@@ -108,135 +112,31 @@ def test_binary_confusion_matrix():
 
 	pyplot.plot(cmat[:, 0, 1] / cmat_all_n, cmat[:, 0, 0] / cmat_all_p)
 
-def cmats_to_rocinfo(cmats):
-	# roi_area = np.count_nonzero(roi) if roi is not None else 1
-
-	num_levels = cmats.shape[0]
-	tp = cmats[:, 0, 0]
-	fp = cmats[:, 0, 1]
-	fn = cmats[:, 1, 0]
-	tn = cmats[:, 1, 1]
-
-	tp_rates = tp / (tp+fn)
-	fp_rates = fp / (fp+tn)
-
-	pos_pred = tp+fp
-	precisions = tp / pos_pred
-	precisions[pos_pred < 10] = 1
-
-	pos_gt = tp+fn
-	recalls = tp / (tp+fn)
-	recalls[pos_gt < 10] = 1
-
-	return EasyDict(
-		# num_levels = num_levels,
-		curve_tpr = tp_rates,
-		curve_fpr = fp_rates,
-		curve_precision = precisions,
-		curve_recall = recalls,
-
-		#cmats = cmats,
-		area_ROC = np.trapz(tp_rates, fp_rates),
-		area_PRC = np.trapz(precisions, recalls),
-
-		# TODO fpr95
-	)
 
 
 
-def plot_classification_curves_draw_entry(plot_roc : pyplot.Axes, plot_prc : pyplot.Axes, curve_info : BinaryClassificationCurve, display_name : str):
-
-	if plot_prc is not None:
-		plot_prc.plot(curve_info.curve_recall, curve_info.curve_precision,
-			# label='{lab:<24}{a:.02f}'.format(lab=label, a=area_under),
-			label=f'{display_name}  {curve_info.area_PRC:.02f}',
-			marker = '.',
-		)
-
-	if plot_roc is not None:
-		plot_roc.plot(curve_info.curve_fpr, curve_info.curve_tpr,
-			# label='{lab:<24}{a:.02f}'.format(lab=label, a=area_under),
-			label=f'{display_name}  {curve_info.area_ROC:.03f}',
-			marker = '.',
-		)
-
-
-def plot_classification_curves(curve_infos : List[BinaryClassificationCurve], method_names : Dict[str, str] = {}):
-	
-	table_scores = DataFrame(data = [
-		Series({
-			'AveragePrecision': crv.area_PRC, 
-			'AUROC': crv.area_ROC, 
-			'FPR-at-95-TPR:': crv.fpr_at_95_tpr,
-			'IOU': crv.IOU_at_05,
-			'PDR': crv.PDR_at_05,
-			},
-			name = method_names.get(crv.method_name, crv.method_name),
-		)
-		for crv in curve_infos
-	])
-	table_scores = table_scores.sort_values('AveragePrecision', ascending=False)
-
-
-	fig = pyplot.figure(figsize=(18, 8))
-	plot_roc, plot_prc = fig.subplots(1, 2)
-	
-	plot_prc.set_xlabel('recall')
-	plot_prc.set_ylabel('precision')
-	plot_prc.set_xlim([0, 1])
-	plot_prc.set_ylim([0, 1])
-
-	
-	plot_roc.set_xlabel('false positive rate')
-	plot_roc.set_ylabel('true positive rate')
-	plot_roc.set_xlim([0, 0.2])
-
-	# sort descending by AP
-	curve_infos_sorted = list(curve_infos)
-	curve_infos_sorted.sort(key=attrgetter('area_PRC'), reverse=True)
-
-	for crv in curve_infos_sorted:
-		plot_classification_curves_draw_entry(
-			plot_prc = plot_prc, 
-			plot_roc = plot_roc, 
-			curve_info = crv,
-			display_name = method_names.get(crv.method_name, crv.method_name),
-		)
-
-	def make_legend(plot_obj, position='lower right', title=None):
-		handles, labels = plot_obj.get_legend_handles_labels()
-		plot_obj.legend(handles, labels, loc=position, title=title)
-
-		plot_obj.grid(True)
-
-	make_legend(plot_prc, 'lower left', title='Average Precision')
-	make_legend(plot_roc, 'lower right', title='AUROC')
-
-	fig.tight_layout()
-
-	return EasyDict(
-		plot_figure = fig,
-		score_table = table_scores,
-	)
-
-
-
-
-
-
-
-
-
+@MetricRegistry.register_class()
 class MetricPixelClassification(EvaluationMetric):
 
+	configs = [
+		EasyDict(
+			name = 'PixBinaryClass-uniThr',
+			# pixel scores in a given image are quantized into bins, 
+			# so that big datasets can be stored in memory and processed in parallel
+			num_bins = 4096,
+			bin_strategy = 'uniform',
+		),
+		EasyDict(
+			name = 'PixBinaryClass',
+			num_bins = 768,
+			bin_strategy = 'percentiles',
+		)
+	]
+
+	@property
+	def name(self):
+		return self.cfg.name
 	
-
-	# pixel scores in a given image are quantized into bins, 
-	# so that big datasets can be stored in memory and processed in parallel
-	num_bins: int = 1024
-
-	# something about visualization
-
 	def vis_frame(self, fid, dset_name, method_name, mask_roi, anomaly_p, image = None, **_):
 		h, w = mask_roi.shape[:2]
 
@@ -252,7 +152,7 @@ class MetricPixelClassification(EvaluationMetric):
 		)
 
 
-	def process_frame(self, label_pixel_gt : np.ndarray, anomaly_p : np.ndarray, fid : str=None, dset_name : str=None, method_name : str=None, **_):
+	def process_frame(self, label_pixel_gt : np.ndarray, anomaly_p : np.ndarray, fid : str=None, dset_name : str=None, method_name : str=None, visualize : bool = True, **_):
 		"""
 		@param label_pixel_gt: HxW uint8
 			0 = road
@@ -272,32 +172,124 @@ class MetricPixelClassification(EvaluationMetric):
 		bc = binary_confusion_matrix(
 			prob = predictions_in_roi,
 			gt_label_bool = labels_in_roi.astype(bool),
-			num_bins = self.num_bins,
+			num_bins = self.cfg.num_bins,
+			bin_strategy = self.cfg.bin_strategy,
 		)
 		# bc.cmats, bc.bins
 
 		# visualization
-		if fid is not None and dset_name is not None and method_name is not None:
+		if visualize and fid is not None and dset_name is not None and method_name is not None:
 			self.vis_frame(fid=fid, dset_name=dset_name, method_name=method_name, mask_roi=mask_roi, anomaly_p=anomaly_p, **_)
+
+		print('Vrange', np.min(predictions_in_roi), np.mean(predictions_in_roi), np.max(predictions_in_roi))
 
 		#TODO dataclass
 		return bc
 
+
+	@staticmethod
+	def aggregate_fixed_bins(frame_results):
+		
+		# bin edges are the same in every frame
+		bin_edges = frame_results[0].bin_edges
+		thresholds = bin_edges[1:]
+
+		# each frame has the same thresholds, so we can sum the cmats
+		cmat_sum = np.sum([result.cmat_sum for result in frame_results], axis=0)
+		print(frame_results[0].cmat_sum.shape)
+		print(cmat_sum.shape)
+
+		return EasyDict(
+			cmat = cmat_sum,
+			thresholds = thresholds,
+		)
+
+	#@staticmethod
+	def aggregate_dynamic_bins(self, frame_results):
+
+		thresholds = np.concatenate([r.bin_edges[1:] for r in frame_results])
+
+		tp_relative = np.concatenate([r.tp_rel for r in frame_results], axis=0)
+		fp_relative = np.concatenate([r.fp_rel for r in frame_results], axis=0)
+
+		num_positives = sum(r.num_pos for r in frame_results)
+		num_negatives = sum(r.num_neg for r in frame_results)
+
+
+		threshold_order = np.argsort(thresholds)[::-1]
+
+		# We start at threshold = 1, and lower it
+		# Initially, prediction=0, all GT=1 pixels are false-negatives, and all GT=0 pixels are true-negatives.
+
+		tp_cumu = np.cumsum(tp_relative[threshold_order])
+		fp_cumu = np.cumsum(fp_relative[threshold_order])
+
+		cmats = np.array([
+			# tp, fp
+			[tp_cumu, fp_cumu],
+			# fn, tn
+			[num_positives - tp_cumu, num_negatives - fp_cumu],
+		]).transpose([2, 0, 1])
+
+		print('Cmats produced', cmats.shape)
+
+		return EasyDict(
+			cmat = cmats,
+			thresholds = thresholds[threshold_order],
+		)
+
 	def aggregate(self, frame_results : list, method_name : str, dataset_name : str):
 		# fuse cmats FIXED BINS
 
-		print(frame_results[0].cmat_sum.shape)
+		if self.cfg.bin_strategy == 'uniform':
+			ag = self.aggregate_fixed_bins(frame_results)
+		else:
+			ag = self.aggregate_dynamic_bins(frame_results)
 
-		cmat_sum = np.sum([result.cmat_sum for result in frame_results], axis=0)
+		thresholds = ag.thresholds
+		cmats = ag.cmat
 
-		print(cmat_sum.shape)
-
-		rocinfo = cmats_to_rocinfo(cmat_sum)
+		print(cmats.shape)
+		curves = curves_from_cmats(cmats, thresholds)
 
 		bc_info = BinaryClassificationCurve(
 			method_name = method_name,
 			dataset_name = dataset_name,
-			**rocinfo,
+			**curves,
 		)
 
 		return bc_info
+
+	def persistence_path_data(self, method_name, dataset_name):
+		return DIR_OUTPUTS / self.name / 'data' / f'PixClassCurve_{method_name}_{dataset_name}.hdf5'
+
+	def persistence_path_plot(self, comparison_name, plot_name):
+		return DIR_OUTPUTS / self.name / 'plot' / f'{comparison_name}__{plot_name}'
+
+	def save(self, aggregated_result, method_name : str, dataset_name : str, path_override : Path = None):
+		out_path = path_override or self.persistence_path_data(method_name, dataset_name)
+		aggregated_result.save(out_path)
+
+	def load(self, method_name : str, dataset_name : str, path_override : Path = None):
+		out_path = path_override or self.persistence_path_data(method_name, dataset_name)
+		
+		return BinaryClassificationCurve.from_file(out_path)
+
+
+	def plot_many(self, aggregated_results : List, comparison_name : str, close : bool = True):
+
+		cinfos = [
+			reduce_curve_resolution(cinfo, num_pts=128)
+			for cinfo in aggregated_results
+		]
+
+		vis_res = plot_classification_curves(cinfos)
+		fig = vis_res.plot_figure
+		table = vis_res.score_table
+			
+		save_figure(self.persistence_path_plot(comparison_name, 'PixClassCurves'), fig)
+
+		if close:
+			pyplot.close(fig)
+
+		save_table(self.persistence_path_plot(comparison_name, 'PixClassTable'), table)
