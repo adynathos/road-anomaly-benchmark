@@ -1,5 +1,13 @@
  
+from typing import List
+from pathlib import Path
+
 from easydict import EasyDict
+
+from ..datasets.dataset_registry import Registry
+
+
+MetricRegistry = Registry()
 
 
 class EvaluationMetric:
@@ -12,7 +20,6 @@ class EvaluationMetric:
 		@param frame: dict containing frame fields, such as `image`, `semantic_class_gt`, `pred_anomaly_p`
 		@return: 
 		"""
-
 		...
 
 	def aggregate(self, frame_results : list):
@@ -20,8 +27,45 @@ class EvaluationMetric:
 		@param frame_results: sequence of outputs of `process_frame` for the whole dataset
 		@return: 
 		"""
-
 		...
 	
+	def save(self, aggregated_result, method_name : str, dataset_name : str, path_override : Path = None):
+		...
+
+	def load(self, method_name : str, dataset_name : str, path_override : Path = None):
+		...
+
+	def plot_many(self, aggregated_results : List, comparison_name : str, close : bool = True):
+		...
+
+	def plot_single(self, aggregated_result, close : bool = True):
+		ag = aggregated_result
+		self.plot_many([ag], f'{ag.method_name}_{ag.dataset_name}', close=close)
+
+
+def save_figure(path, fig):
+	path.parent.mkdir(parents=True, exist_ok=True)
+
+	for fmt in ('png', 'svg', 'pdf'):
+		fig.savefig(path.with_suffix(f'.{fmt}'))
+	
+
+def save_table(path, table):
+	path.parent.mkdir(parents=True, exist_ok=True)
+	
+	path.with_suffix('.html').write_text(table.to_html())
+	path.with_suffix('.tex').write_text(table.to_latex())
+
+
+	# table_tex = table_pd.to_latex(
+	# 	float_format = float_format,
+	# 	columns = [(ds, metric) for (ds, metric) in table_columns.keys() if ds != 'Any']
+	# )
+
+	# table_html = table_pd.to_html(
+	# 	float_format = float_format,
+	# )
+
+
 
 

@@ -1,5 +1,5 @@
 
-from typing import List, Literal
+from typing import List#, Literal
 from pathlib import Path
 
 import numpy as np
@@ -15,7 +15,7 @@ from ..jupyter_show_image import adapt_img_data, imwrite
 
 def binary_confusion_matrix(
 		prob : np.ndarray, gt_label_bool : np.ndarray, 
-		num_bins : int = 1024, bin_strategy : Literal['uniform', 'percentiles'] = 'uniform',
+		num_bins : int = 1024, bin_strategy = 'uniform', # : Literal['uniform', 'percentiles'] = 'uniform',
 		normalize : bool = False, dtype = np.float64):
 	
 	area = gt_label_bool.__len__()
@@ -181,9 +181,8 @@ class MetricPixelClassification(EvaluationMetric):
 		if visualize and fid is not None and dset_name is not None and method_name is not None:
 			self.vis_frame(fid=fid, dset_name=dset_name, method_name=method_name, mask_roi=mask_roi, anomaly_p=anomaly_p, **_)
 
-		print('Vrange', np.min(predictions_in_roi), np.mean(predictions_in_roi), np.max(predictions_in_roi))
+		#print('Vrange', np.min(predictions_in_roi), np.mean(predictions_in_roi), np.max(predictions_in_roi))
 
-		#TODO dataclass
 		return bc
 
 

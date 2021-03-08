@@ -1,6 +1,6 @@
 
 import dataclasses
-from typing import List, Dict, Literal
+from typing import List, Dict
 from operator import attrgetter
 
 import numpy as np
