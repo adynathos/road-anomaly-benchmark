@@ -35,16 +35,10 @@ def binary_confusion_matrix(
 		# dynamic bins representing the range of occurring values
 		# bin edges are following the distribution of positive and negative pixels
 
-		# need num_bins+1 edges
-		if num_bins % 2 == 0:
-			b1 = num_bins//2
-			b2 = b1 + 1
-		else:
-			b1 = b2 = num_bins//2+1
-
 		bins = np.concatenate([
-			np.quantile(prob_at_true, np.linspace(0, 1, b1)),
-			np.quantile(prob_at_true, np.linspace(0, 1, b2)),
+			[0, 1], # make sure 0 and 1 are included
+			np.quantile(prob_at_true, np.linspace(0, 1, num_bins//2)),
+			np.quantile(prob_at_true, np.linspace(0, 1, num_bins//2)),
 		])
 		
 		# sort and remove duplicates, duplicated cause an exception in np.histogram
@@ -220,8 +214,8 @@ class MetricPixelClassification(EvaluationMetric):
 		# We start at threshold = 1, and lower it
 		# Initially, prediction=0, all GT=1 pixels are false-negatives, and all GT=0 pixels are true-negatives.
 
-		tp_cumu = np.cumsum(tp_relative[threshold_order])
-		fp_cumu = np.cumsum(fp_relative[threshold_order])
+		tp_cumu = np.cumsum(tp_relative[threshold_order].astype(np.float64))
+		fp_cumu = np.cumsum(fp_relative[threshold_order].astype(np.float64))
 
 		cmats = np.array([
 			# tp, fp
@@ -229,8 +223,6 @@ class MetricPixelClassification(EvaluationMetric):
 			# fn, tn
 			[num_positives - tp_cumu, num_negatives - fp_cumu],
 		]).transpose([2, 0, 1])
-
-		print('Cmats produced', cmats.shape)
 
 		return EasyDict(
 			cmat = cmats,
