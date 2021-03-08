@@ -2,19 +2,20 @@
 from pathlib import Path
 from os import environ
 from functools import partial
+import multiprocessing
 from concurrent.futures import ThreadPoolExecutor
 import logging
 
 import numpy as np
 from tqdm import tqdm
 
-from . import DIR_SRC
+from .paths import DIR_SRC, DIR_OUTPUTS
 from .datasets import DatasetRegistry
 from .datasets.dataset_io import ChannelLoaderHDF5
+from .metrics import MetricRegistry
 
 log = logging.getLogger(__name__)
 
-DIR_OUTPUTS = Path(environ.get('DIR_OUTPUTS', DIR_SRC / 'outputs'))
 
 
 class Evaluation:
@@ -64,8 +65,11 @@ class Evaluation:
 
 		# self.channels['anomaly_p'].write(value, method_name = self.method_name, **frame)
 	
-	def calculate_metric_from_saved_outputs(self, metric, sample=None):
+
+	def run_metric_single(self, metric_name, sample=None):
 		# TODO sample is part of evaluation
+
+		metric = MetricRegistry.get(metric_name)
 
 		fr_results = []
 
@@ -96,6 +100,84 @@ class Evaluation:
 			method_name = self.method_name,
 			dataset_name = self.dataset_name,
 		)
+
+	@classmethod
+	def metric_worker(cls, method_name, metric_name, dataset_name_and_frame_idx):
+
+		dataset_name, frame_idx = dataset_name_and_frame_idx
+
+		dset = DatasetRegistry.get(dataset_name)
+		metric = MetricRegistry.get(metric_name)
+			
+		fr = dset[frame_idx]
+
+		result = metric.process_frame(
+			anomaly_p = cls.channels['anomaly_p'].read(
+				method_name = method_name, 
+				dset_name = fr.dset_name,
+				fid = fr.fid,
+			),
+			method_name = method_name, 
+			**fr,
+		)
+
+		return result
+
+
+	def run_metric_parallel(self, metric_name, sample=None):
+
+		metric = MetricRegistry.get(metric_name)
+		
+		if sample is not None:
+			dset_name, num_fr = sample
+			frame_indices = range(num_fr)
+		else:
+			dset_name = self.dataset_name
+			frame_indices = range(self.get_dataset().__len__())
+
+		tasks = [
+			(dset_name, idx)
+			for idx in frame_indices
+		]
+
+		with multiprocessing.Pool() as pool:
+			it = pool.imap_unordered(
+				partial(self.metric_worker, self.method_name, metric_name),
+				tasks,
+				chunksize = 4,
+			)
+			
+			processed_frames = list(tqdm(it, total=tasks.__len__()))
+
+		ag = metric.aggregate(	
+			processed_frames,
+			method_name = self.method_name,
+			dataset_name = dset_name,
+		)
+
+		return ag
+	
+
+	def calculate_metric_from_saved_outputs(self, metric_name, sample=None, parallel=True, show_plot=False):
+
+		metric = MetricRegistry.get(metric_name)
+
+		if parallel:
+			ag = self.run_metric_parallel(metric_name, sample=sample)
+		else:
+			ag = self.run_metric_single(metric_name, sample=sample)
+
+		dset_name = sample[0] if sample is not None else self.dataset_name
+
+		metric.save(
+			ag, 
+			method_name = self.method_name,
+			dataset_name = dset_name,
+		)
+
+		metric.plot_single(ag, close = not show_plot)
+
+		return ag
 
 
 	def wait_to_finish_saving(self):

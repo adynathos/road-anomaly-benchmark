@@ -7,11 +7,10 @@ import logging, re
 from easydict import EasyDict
 import numpy as np
 
+from ..paths import DIR_DATASETS
 from .dataset_registry import DatasetRegistry
 from .dataset_io import DatasetBase, ChannelLoaderImage
 
-from .. import DIR_SRC
-DIR_DATASETS = Path(environ.get('DIR_DATASETS', DIR_SRC / 'datasets'))
 
 log = logging.getLogger(__name__)
 

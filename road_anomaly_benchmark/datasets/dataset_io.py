@@ -4,6 +4,7 @@ from operator import itemgetter
 import logging
 
 from easydict import EasyDict
+import numpy as np
 import h5py
 from ..jupyter_show_image import imread, imwrite
 
@@ -108,6 +109,50 @@ class ChannelLoaderHDF5(ChannelLoaderFileCollection):
 				hdf5_file_handle[var_name][:] = data
 			else:
 				hdf5_file_handle.create_dataset(var_name, data=data, compression=self.compression)
+
+
+def hdf5_write_hierarchy_to_group(group, hierarchy):
+	for name, value in hierarchy.items():
+		# sub-dict
+		if isinstance(value, dict):
+			hdf5_write_hierarchy_to_group(
+				group = group.create_group(name), 
+				hierarchy = value
+			)
+		# label or single value
+		elif isinstance(value, (str, bytes, float, int)):
+			group.attrs[name] = value
+		# ndarray
+		elif isinstance(value, np.ndarray):
+			group[name] = value
+		else:
+			raise TypeError(f'Failed to write type {type(value)} to hdf: {name}={value}')
+			
+def hdf5_write_hierarchy_to_file(path, hierarchy, create_parent_dir=True):
+	if create_parent_dir:
+		path = Path(path)
+		path.parent.mkdir(exist_ok=True, parents=True)
+
+	with h5py.File(path, 'w') as f:
+		hdf5_write_hierarchy_to_group(f, hierarchy)
+	
+def hdf5_read_hierarchy_from_group(group):
+	return EasyDict(
+		# label or single value
+		**group.attrs,
+		# numeric arrays
+		**{
+			name: hdf5_read_hierarchy_from_group(value) 
+			if isinstance(value, h5py.Group) else value[()]
+			for name, value in group.items()
+		}
+	)
+	
+def hdf5_read_hierarchy_from_file(path):
+	with h5py.File(path, 'r') as f:
+		return hdf5_read_hierarchy_from_group(f)
+		
+
 
 
 class DatasetBase:

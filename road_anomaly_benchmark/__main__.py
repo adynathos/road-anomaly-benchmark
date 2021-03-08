@@ -14,7 +14,9 @@ def main():
 @click.argument('metric_name', type=str)
 @click.argument('method_names', type=str)
 @click.argument('dataset_names', type=str)
-def metric(method_names, metric_name, dataset_names):
+@click.option('--limit-length', type=int, default=0)
+@click.option('--parallel/--no-parallel', default=True)
+def metric(method_names, metric_name, dataset_names, limit_length, parallel):
 
 	ev = Evaluation(
 		method_name = method_names, 
@@ -23,13 +25,12 @@ def metric(method_names, metric_name, dataset_names):
 		# metrics = ['PixelClassification'],
 	)
 
-	metric = MetricRegistry.get(metric_name)
-
-	met_result = ev.calculate_metric_from_saved_outputs(
-		metric, 
-		sample=(dataset_names, range(20)),
+	ag = ev.calculate_metric_from_saved_outputs(
+		metric_name,
+		sample = (dataset_names, limit_length) if limit_length != 0 else None,
+		parallel = parallel,
+		show_plot = False,
 	)
-	metric.plot_single(met_result, close=False)
 
 
 main()	

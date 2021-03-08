@@ -2,8 +2,6 @@
 from pathlib import Path
 import logging, logging.handlers, sys
 
-DIR_SRC = Path(__file__).absolute().parents[1]
-
 def init_log():
 	log_root = logging.getLogger(__name__)
 	log_root.setLevel(logging.DEBUG)

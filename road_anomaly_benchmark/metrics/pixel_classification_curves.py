@@ -8,6 +8,7 @@ from matplotlib import pyplot
 from easydict import EasyDict
 from pandas import DataFrame, Series
 
+from ..datasets.dataset_io import hdf5_write_hierarchy_to_file, hdf5_read_hierarchy_from_file
 
 @dataclasses.dataclass
 class BinaryClassificationCurve:
