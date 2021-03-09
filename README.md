@@ -62,7 +62,7 @@ python -m road_anomaly_benchmark comparison MyComparison PixBinaryClass Resynth2
 
 ### Implementing a metric
 
-A metric should implement the `EvaluationMetric` interface from ([road-anomaly-benchmark/metrics/base.py](road-anomaly-benchmark/metrics/base.py).
-See `MetricPixelClassification` from [road-anomaly-benchmark/metrics/pixel_classification.py](road-anomaly-benchmark/metrics/pixel_classification.py).
+A metric should implement the `EvaluationMetric` interface from ([road_anomaly_benchmark/metrics/base.py](road_anomaly_benchmark/metrics/base.py).
+See `MetricPixelClassification` from [road_anomaly_benchmark/metrics/pixel_classification.py](road_anomaly_benchmark/metrics/pixel_classification.py).
 
 
