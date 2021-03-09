@@ -25,7 +25,7 @@ from road_anomaly_benchmark.evaluation import Evaluation
 
 ev = Evaluation(
 	method_name = 'Resynthesis', 
-	datasets = ['LostAndFound-test'], 
+	dataset_name = 'LostAndFound-test', 
 )
 
 for fr in ev.get_frames():
