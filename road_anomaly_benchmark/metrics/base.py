@@ -2,6 +2,7 @@
 from typing import List
 from pathlib import Path
 
+import numpy as np
 from easydict import EasyDict
 
 from ..datasets.dataset_registry import Registry
@@ -15,7 +16,7 @@ class EvaluationMetric:
 	def __init__(self, cfg):
 		self.cfg = EasyDict(cfg)
 
-	def process_frame(self, frame : EasyDict, dset_name : str=None, method_name : str=None, visualize : bool = True, **_):
+	def process_frame(self, label_pixel_gt : np.ndarray, anomaly_p : np.ndarray, dset_name : str=None, method_name : str=None, visualize : bool = True, **_):
 		"""
 		@param frame: dict containing frame fields, such as `image`, `semantic_class_gt`, `pred_anomaly_p`
 		@return: 
