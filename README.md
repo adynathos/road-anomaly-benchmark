@@ -14,9 +14,9 @@
 
 
 * Place the datasets in `./datasets` (or override with env var `DIR_DATASETS`)
-  * `dataset_ObstacleTrack`
-  * `dataset_AnomalyTrack`
-  * `dataset_LostAndFound` (or override with `DSET_LAF`)
+    * `dataset_ObstacleTrack`
+    * `dataset_AnomalyTrack`
+    * `dataset_LostAndFound` (or override with `DSET_LAF`)
 
 * Run inference and store results in files
 
@@ -24,13 +24,13 @@
 from road_anomaly_benchmark.evaluation import Evaluation
 
 ev = Evaluation(
-	method_name = 'Resynthesis', 
-	dataset_name = 'LostAndFound-test', 
+    method_name = 'Resynthesis',
+    dataset_name = 'LostAndFound-test',
 )
 
 for fr in ev.get_frames():
-	anomaly_p = my_method(fr.image)
-	ev.save_result(fr, anomaly_p)
+    anomaly_p = my_method(fr.image)
+    ev.save_result(fr, anomaly_p)
 
 ev.wait_to_finish_saving()
 ```
@@ -38,7 +38,7 @@ ev.wait_to_finish_saving()
 The files will be stored in `./outputs/anomaly_p/...`. The storage directory can be overriden with env var `DIR_OUTPUTS`.
 
 * Calculate metrics  
-This step will also create plots in `./outputs/{metric}/plot`
+  This step will also create plots in `./outputs/{metric}/plot`
 
 ```bash
 python -m road_anomaly_benchmark metric PixBinaryClass Resynth2048Orig LostAndFound-test
@@ -60,3 +60,7 @@ A metric should implement the `EvaluationMetric` interface from ([road_anomaly_b
 See `MetricPixelClassification` from [road_anomaly_benchmark/metrics/pixel_classification.py](road_anomaly_benchmark/metrics/pixel_classification.py).
 
 
+* Calculate segment metrics (tested with Entropy Max and anomaly track)
+```bash
+python -m road_anomaly_benchmark metric SegIoU Entropy_max RoadAnomalyTrack-test
+```
