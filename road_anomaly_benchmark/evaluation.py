@@ -104,26 +104,29 @@ class Evaluation:
 
 	@classmethod
 	def metric_worker(cls, method_name, metric_name, frame_vis, dataset_name_and_frame_idx):
+		try:
+			dataset_name, frame_idx = dataset_name_and_frame_idx
 
-		dataset_name, frame_idx = dataset_name_and_frame_idx
+			dset = DatasetRegistry.get(dataset_name)
+			metric = MetricRegistry.get(metric_name)
+				
+			fr = dset[frame_idx]
 
-		dset = DatasetRegistry.get(dataset_name)
-		metric = MetricRegistry.get(metric_name)
-			
-		fr = dset[frame_idx]
-
-		result = metric.process_frame(
-			anomaly_p = cls.channels['anomaly_p'].read(
+			result = metric.process_frame(
+				anomaly_p = cls.channels['anomaly_p'].read(
+					method_name = method_name, 
+					dset_name = fr.dset_name,
+					fid = fr.fid,
+				),
 				method_name = method_name, 
-				dset_name = fr.dset_name,
-				fid = fr.fid,
-			),
-			method_name = method_name, 
-			visualize = frame_vis,
-			**fr,
-		)
+				visualize = frame_vis,
+				**fr,
+			)
 
-		return result
+			return result
+		except Exception as e:
+			log.exception(f'Metric worker {e}')
+			raise e
 
 
 	def run_metric_parallel(self, metric_name, sample=None, frame_vis=False):

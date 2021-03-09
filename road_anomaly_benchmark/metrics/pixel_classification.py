@@ -43,12 +43,10 @@ def binary_confusion_matrix(
 			bins += [
 				np.quantile(prob_at_true, np.linspace(0, 1, min(num_bins//2, prob_at_true.size))),
 			]
-			print('ptrue', prob_at_true.size)
 		if prob_at_false.size:
 			bins += [
 				np.quantile(prob_at_false, np.linspace(0, 1, min(num_bins//2, prob_at_false.size))),
 			]
-			print('pfalse', prob_at_false.size)
 
 			
 		bins = np.concatenate(bins)
