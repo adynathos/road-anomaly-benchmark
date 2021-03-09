@@ -10,3 +10,38 @@
 * [Road Obstacles V2](doc/RoadObstaclesV2.md) - additional recordings of obstacles, in difficult weather and at night.
 
 
+### Evaluation procedure
+
+* Run inference and store results in files
+
+```python
+from road_anomaly_benchmark.evaluation import Evaluation
+
+ev = Evaluation(
+	method_name = 'Resynthesis', 
+	datasets = ['LostAndFound-test'], 
+)
+
+for fr in ev.get_frames():
+	anomaly_p = my_method(fr.image)
+	ev.save_result(fr, anomaly_p)
+
+ev.wait_to_finish_saving()
+```
+
+The files will be stored in `./outputs/anomaly_p/...`
+
+* Calculate metrics  
+This step will also create plots in `./outputs/{metric}/plot`
+
+```bash
+python -m road_anomaly_benchmark metric PixBinaryClass Resynth2048Orig LostAndFound-test
+```
+
+* Plots and tables
+
+```bash
+python -m road_anomaly_benchmark comparison metric1,metric2 method1,method2 dset1,dset2
+```
+
+

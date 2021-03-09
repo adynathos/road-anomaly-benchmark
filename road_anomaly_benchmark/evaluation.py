@@ -39,6 +39,9 @@ class Evaluation:
 	def get_dataset(self):
 		return DatasetRegistry.get(self.dataset_name)
 
+	def get_frames(self):
+		return self.get_dataset().iter('image')
+
 	@staticmethod
 	def write_task(channel, value, extra):
 		try:

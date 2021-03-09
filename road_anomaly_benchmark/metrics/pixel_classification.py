@@ -276,6 +276,8 @@ class MetricPixelClassification(EvaluationMetric):
 		
 		return BinaryClassificationCurve.from_file(out_path)
 
+	def fields_for_table(self):
+		return ['area_PRC', 'tpr95_fpr']
 
 	def plot_many(self, aggregated_results : List, comparison_name : str, close : bool = True):
 

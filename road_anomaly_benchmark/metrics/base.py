@@ -35,6 +35,17 @@ class EvaluationMetric:
 	def load(self, method_name : str, dataset_name : str, path_override : Path = None):
 		...
 
+	def fields_for_table(self) -> List[str]:
+		return []
+
+	def load_for_table(self, method_name : str, dataset_name : str, path_override : Path = None):
+		ag = self.load(method_name, dataset_name, path_override)
+
+		return EasyDict({
+			f: getattr(ag, f)
+			for f in self.fields_for_table()
+		})
+
 	def plot_many(self, aggregated_results : List, comparison_name : str, close : bool = True):
 		...
 
