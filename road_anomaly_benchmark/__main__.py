@@ -16,7 +16,8 @@ def main():
 @click.argument('dataset_names', type=str)
 @click.option('--limit-length', type=int, default=0)
 @click.option('--parallel/--no-parallel', default=True)
-def metric(method_names, metric_name, dataset_names, limit_length, parallel):
+@click.option('--frame-vis/--no-frame-vis', default=False)
+def metric(method_names, metric_name, dataset_names, limit_length, parallel, frame_vis):
 
 	ev = Evaluation(
 		method_name = method_names, 
@@ -30,6 +31,7 @@ def metric(method_names, metric_name, dataset_names, limit_length, parallel):
 		sample = (dataset_names, limit_length) if limit_length != 0 else None,
 		parallel = parallel,
 		show_plot = False,
+		frame_vis = frame_vis,
 	)
 
 

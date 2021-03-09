@@ -66,7 +66,7 @@ class Evaluation:
 		# self.channels['anomaly_p'].write(value, method_name = self.method_name, **frame)
 	
 
-	def run_metric_single(self, metric_name, sample=None):
+	def run_metric_single(self, metric_name, sample=None, frame_vis=False):
 		# TODO sample is part of evaluation
 
 		metric = MetricRegistry.get(metric_name)
@@ -91,6 +91,7 @@ class Evaluation:
 					fid = fr.fid,
 				),
 				method_name = self.method_name, 
+				visualize = frame_vis,
 				**fr,
 			)
 			fr_results.append(fr_result)
@@ -102,7 +103,7 @@ class Evaluation:
 		)
 
 	@classmethod
-	def metric_worker(cls, method_name, metric_name, dataset_name_and_frame_idx):
+	def metric_worker(cls, method_name, metric_name, frame_vis, dataset_name_and_frame_idx):
 
 		dataset_name, frame_idx = dataset_name_and_frame_idx
 
@@ -118,13 +119,14 @@ class Evaluation:
 				fid = fr.fid,
 			),
 			method_name = method_name, 
+			visualize = frame_vis,
 			**fr,
 		)
 
 		return result
 
 
-	def run_metric_parallel(self, metric_name, sample=None):
+	def run_metric_parallel(self, metric_name, sample=None, frame_vis=False):
 
 		metric = MetricRegistry.get(metric_name)
 		
@@ -142,7 +144,7 @@ class Evaluation:
 
 		with multiprocessing.Pool() as pool:
 			it = pool.imap_unordered(
-				partial(self.metric_worker, self.method_name, metric_name),
+				partial(self.metric_worker, self.method_name, metric_name, frame_vis),
 				tasks,
 				chunksize = 4,
 			)
@@ -158,14 +160,14 @@ class Evaluation:
 		return ag
 	
 
-	def calculate_metric_from_saved_outputs(self, metric_name, sample=None, parallel=True, show_plot=False):
+	def calculate_metric_from_saved_outputs(self, metric_name, sample=None, parallel=True, show_plot=False, frame_vis=False):
 
 		metric = MetricRegistry.get(metric_name)
 
 		if parallel:
-			ag = self.run_metric_parallel(metric_name, sample=sample)
+			ag = self.run_metric_parallel(metric_name, sample=sample, frame_vis=frame_vis)
 		else:
-			ag = self.run_metric_single(metric_name, sample=sample)
+			ag = self.run_metric_single(metric_name, sample=sample, frame_vis=frame_vis)
 
 		dset_name = sample[0] if sample is not None else self.dataset_name
 

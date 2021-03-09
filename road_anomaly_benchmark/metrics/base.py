@@ -15,14 +15,14 @@ class EvaluationMetric:
 	def __init__(self, cfg):
 		self.cfg = EasyDict(cfg)
 
-	def process_frame(self, frame : EasyDict):
+	def process_frame(self, frame : EasyDict, dset_name : str=None, method_name : str=None, visualize : bool = True, **_):
 		"""
 		@param frame: dict containing frame fields, such as `image`, `semantic_class_gt`, `pred_anomaly_p`
 		@return: 
 		"""
 		...
 
-	def aggregate(self, frame_results : list):
+	def aggregate(self, frame_results : list, method_name : str, dataset_name : str):
 		"""
 		@param frame_results: sequence of outputs of `process_frame` for the whole dataset
 		@return: 
