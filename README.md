@@ -54,12 +54,6 @@ For example
 python -m road_anomaly_benchmark comparison LAF1 PixBinaryClass Resynth2048Orig,Min_softmax LostAndFound-test,LostAndFound-train
 ```
 
-for example
-
-```bash
-python -m road_anomaly_benchmark comparison MyComparison PixBinaryClass Resynth2048Orig,Min_softmax LostAndFound-test,LostAndFound-test
-```
-
 ### Implementing a metric
 
 A metric should implement the `EvaluationMetric` interface from ([road_anomaly_benchmark/metrics/base.py](road_anomaly_benchmark/metrics/base.py).
