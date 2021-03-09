@@ -35,11 +35,23 @@ def binary_confusion_matrix(
 		# dynamic bins representing the range of occurring values
 		# bin edges are following the distribution of positive and negative pixels
 
-		bins = np.concatenate([
+		bins = [
 			[0, 1], # make sure 0 and 1 are included
-			np.quantile(prob_at_true, np.linspace(0, 1, num_bins//2)),
-			np.quantile(prob_at_true, np.linspace(0, 1, num_bins//2)),
-		])
+		]
+
+		if prob_at_true.size:
+			bins += [
+				np.quantile(prob_at_true, np.linspace(0, 1, min(num_bins//2, prob_at_true.size))),
+			]
+			print('ptrue', prob_at_true.size)
+		if prob_at_false.size:
+			bins += [
+				np.quantile(prob_at_false, np.linspace(0, 1, min(num_bins//2, prob_at_false.size))),
+			]
+			print('pfalse', prob_at_false.size)
+
+			
+		bins = np.concatenate(bins)
 		
 		# sort and remove duplicates, duplicated cause an exception in np.histogram
 		bins = np.unique(bins)

@@ -131,8 +131,7 @@ class Evaluation:
 		metric = MetricRegistry.get(metric_name)
 		
 		if sample is not None:
-			dset_name, num_fr = sample
-			frame_indices = range(num_fr)
+			dset_name, frame_indices = sample
 		else:
 			dset_name = self.dataset_name
 			frame_indices = range(self.get_dataset().__len__())

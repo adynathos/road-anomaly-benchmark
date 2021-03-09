@@ -28,7 +28,7 @@ def metric(method_names, metric_name, dataset_names, limit_length, parallel, fra
 
 	ag = ev.calculate_metric_from_saved_outputs(
 		metric_name,
-		sample = (dataset_names, limit_length) if limit_length != 0 else None,
+		sample = (dataset_names, range(limit_length)) if limit_length != 0 else None,
 		parallel = parallel,
 		show_plot = False,
 		frame_vis = frame_vis,
