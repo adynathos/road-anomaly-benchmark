@@ -12,6 +12,12 @@
 
 ### Evaluation procedure
 
+
+* Place the datasets in `./datasets` (or override with env var `DIR_DATASETS`)
+  * `dataset_ObstacleTrack`
+  * `dataset_AnomalyTrack`
+  * `dataset_LostAndFound` (or override with `DSET_LAF`)
+
 * Run inference and store results in files
 
 ```python
@@ -29,7 +35,7 @@ for fr in ev.get_frames():
 ev.wait_to_finish_saving()
 ```
 
-The files will be stored in `./outputs/anomaly_p/...`
+The files will be stored in `./outputs/anomaly_p/...`. The storage directory can be overriden with env var `DIR_OUTPUTS`.
 
 * Calculate metrics  
 This step will also create plots in `./outputs/{metric}/plot`
