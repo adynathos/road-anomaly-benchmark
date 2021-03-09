@@ -3,6 +3,9 @@ import logging
 log = logging.getLogger('road_anomaly_benchmark.__main__')
 
 import click
+from pandas import DataFrame, Series
+
+from .paths import DIR_OUTPUTS
 from .evaluation import Evaluation
 from .metrics import MetricRegistry
 
@@ -53,11 +56,58 @@ def metric(method_names, metric_names, dataset_names, limit_length, parallel, fr
 @click.argument('metric_names', type=str)
 @click.argument('method_names', type=str)
 @click.argument('dataset_names', type=str)
-def comparison(comparison_name, method_names, metric_names, dataset_names):
+@click.option('order-by', type=str, default='LostAndFound-test.PixBinaryClass.area_PRC')
+def comparison(comparison_name, method_names, metric_names, dataset_names, order_by):
 
 	method_names = name_list(method_names)
 	metric_names = name_list(metric_names)
 	dataset_names = dataset_names(metric_names)
+
+	metrics = [MetricRegistry.get(m) for m in metric_names]
+
+	columns = {}
+
+	def get_col(name):
+		c = columns.get(name)
+		if c:
+			return c
+		else:
+			return columns.setdefault(name, Series(dtype=np.float64))
+
+	for metric in metrics:
+		for dset in dataset_names:
+			ags = [
+				metric.load(method_name = method, dataset_name = dset)
+				for method in method_names
+			]
+			# TODO provide method name map
+			metric.plot_many(ags, comparison_name)
+
+			for ag, method in zip(ags, method_names):
+				for f, v in metric.extracts_fields_for_table(ag).items():
+					get_col(f'{dset}.{metric}.{f}')[method] = v
+
+	table = DataFrame(data = columns)
+
+	if order_by in table:
+		table = table.sort_values(order_by, ascending=False)
+
+	table_t = table.transpose()
+	float_format = lambda f: '-' if np.isnan(f) else f'{100*f:.01f}'
+
+	table_tex = table_t.to_latex(
+		float_format = float_format,
+	)
+
+	table_html = table_t.to_html(
+		float_format = float_format,
+	)
+
+	out_f = DIR_OUTPUTS / 'tables' / comparison_name
+
+	out_f.with_suffix('.html').write_text(table_html)
+	out_f.with_suffix('.tex').write_text(table_texl)
+
 
 
 

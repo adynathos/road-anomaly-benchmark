@@ -38,9 +38,7 @@ class EvaluationMetric:
 	def fields_for_table(self) -> List[str]:
 		return []
 
-	def load_for_table(self, method_name : str, dataset_name : str, path_override : Path = None):
-		ag = self.load(method_name, dataset_name, path_override)
-
+	def extracts_fields_for_table(self, ag):
 		return EasyDict({
 			f: getattr(ag, f)
 			for f in self.fields_for_table()
