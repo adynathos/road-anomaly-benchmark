@@ -43,6 +43,10 @@ python -m road_anomaly_benchmark metric PixBinaryClass Resynth2048Orig LostAndFo
 ```bash
 python -m road_anomaly_benchmark comparison MyComparison metric1,metric2 method1,method2 dset1,dset2
 ```
+For example
+```
+python -m road_anomaly_benchmark comparison LAF1 PixBinaryClass Resynth2048Orig,Min_softmax LostAndFound-test,LostAndFound-train
+```
 
 for example
 
