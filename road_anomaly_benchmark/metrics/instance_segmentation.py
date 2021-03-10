@@ -1,8 +1,15 @@
-import numpy as np
-from easydict import EasyDict
 
-from .base import EvaluationMetric, MetricRegistry, save_figure, save_table
+import dataclasses
+
+import numpy as np
+
+from easydict import EasyDict
 from scipy.ndimage.measurements import label
+from pathlib import Path
+
+from .base import EvaluationMetric, MetricRegistry
+from ..evaluation import DIR_OUTPUTS
+from ..datasets.dataset_io import hdf5_write_hierarchy_to_file, hdf5_read_hierarchy_from_file
 
 
 def segment_metrics(anomaly_gt, anomaly_pred, iou_threshold):
@@ -14,15 +21,22 @@ def segment_metrics(anomaly_gt, anomaly_pred, iou_threshold):
     """
 
     structure = np.ones((3, 3), dtype=np.int)
-    # connected components
+
+    """connected components"""
     anomaly_instances, n_anomaly = label(anomaly_gt, structure)
     anomaly_seg_pred, n_seg_pred = label(anomaly_pred, structure)
+
+    """remove connected compontents below a size threshold"""
+    # minimum_cc_sum  = 250
+    # labeled_mask = np.copy(anomaly_seg_pred)
+    # for comp in range(n_seg_pred):
+    #     if np.sum(anomaly_seg_pred[labeled_mask == comp]) < minimum_cc_sum:
+    #         anomaly_seg_pred[labeled_mask == comp] = 0
 
     """Loop over ground truth instances"""
     sIoU_gt = []
     size_gt = []
     for i in range(1, n_anomaly + 1):
-        # TODO bbox transform
         tp_loc = anomaly_seg_pred[anomaly_instances == i]
         seg_ind = np.unique(tp_loc[tp_loc != 0])
 
@@ -51,21 +65,48 @@ def segment_metrics(anomaly_gt, anomaly_pred, iou_threshold):
         sIoU_pred.append(intersection / adjusted_union)
         size_pred.append(np.sum(anomaly_seg_pred == i))
 
-    tp = len([i for i in range(len(sIoU_gt)) if sIoU_gt[i] >= iou_threshold])
-    fn = len([i for i in range(len(sIoU_gt)) if sIoU_gt[i] < iou_threshold])
-    fp = len([i for i in range(len(sIoU_pred)) if sIoU_pred[i] < iou_threshold])
+    sIoU_gt = np.array(sIoU_gt)
+    sIoU_pred = np.array(sIoU_pred)
+    size_gt = np.array((size_gt))
+    size_pred = np.array(size_pred)
 
-    # return tp, fn, fp, sIoU_gt, sIoU_pred
+    tp = np.count_nonzero(sIoU_gt >= iou_threshold)
+    fn = np.count_nonzero(sIoU_gt < iou_threshold)
+    fp = np.count_nonzero(sIoU_pred < iou_threshold)
 
     return EasyDict(tp=tp, fn=fn, fp=fp, sIoU_gt=sIoU_gt, sIoU_pred=sIoU_pred, size_gt=size_gt, size_pred=size_pred)
 
+
+@dataclasses.dataclass
+class ResultsInfo:
+    method_name : str
+    dataset_name : str
+
+    tp : int
+    fn : int
+    fp : int
+    f1 : float
+    sIoU_gt : float
+    sIoU_pred : float
+
+    def __iter__(self):
+        return dataclasses.asdict(self).items()
+
+    def save(self, path):
+        hdf5_write_hierarchy_to_file(path, dataclasses.asdict(self))
+
+    @classmethod
+    def from_file(cls, path):
+        return cls(**hdf5_read_hierarchy_from_file(path))
 
 
 @MetricRegistry.register_class()
 class MetricSegment(EvaluationMetric):
     configs = [
         EasyDict(
-            name='SegIoU',
+            name='SegEval',
+            thresh_p=0.8,
+            thresh_sIoU=0.5
         )
     ]
 
@@ -73,9 +114,7 @@ class MetricSegment(EvaluationMetric):
     def name(self):
         return self.cfg.name
 
-
-    def process_frame(self, label_pixel_gt: np.ndarray, anomaly_p: np.ndarray,
-                      thresh_p: float = 0.8, thresh_sIoU: float = 0.5, **_):
+    def process_frame(self, label_pixel_gt: np.ndarray, anomaly_p: np.ndarray, **_):
         """
         @param label_pixel_gt: HxW uint8
             0 = in-distribution / road
@@ -86,8 +125,8 @@ class MetricSegment(EvaluationMetric):
         """
 
         segmentation = np.copy(anomaly_p)
-        segmentation[segmentation > thresh_p] = 1
-        segmentation[segmentation <= thresh_p] = 0
+        segmentation[segmentation > self.cfg.thresh_p] = 1
+        segmentation[segmentation <= self.cfg.thresh_p] = 0
 
         anomaly_gt = np.zeros(label_pixel_gt.shape)
         anomaly_gt[label_pixel_gt == 1] = 1
@@ -95,7 +134,7 @@ class MetricSegment(EvaluationMetric):
         anomaly_pred[segmentation == 1] = 1
         anomaly_pred[label_pixel_gt == 255] = 0
 
-        results = segment_metrics(anomaly_gt, anomaly_pred, thresh_sIoU)
+        results = segment_metrics(anomaly_gt, anomaly_pred, self.cfg.thresh_sIoU)
 
         # from PIL import Image
         # Image.fromarray((anomaly_pred*255).astype("uint8")).save("pred.png")
@@ -105,27 +144,40 @@ class MetricSegment(EvaluationMetric):
 
         return results
 
-
     def aggregate(self, frame_results: list, method_name: str, dataset_name: str):
 
-        l = len(frame_results)
-        tp_total = sum([frame_results[i]["tp"] for i in range(l)])
-        fn_total = sum([frame_results[i]["fn"] for i in range(l)])
-        fp_total = sum([frame_results[i]["fp"] for i in range(l)])
-
-        sIoU_gt_all = []
-        sIoU_pred_all = []
-        for i in range(l):
-            sIoU_gt_all = sIoU_gt_all + frame_results[i]["sIoU_gt"]
-            sIoU_pred_all = sIoU_pred_all + frame_results[i]["sIoU_pred"]
-        sIoU_gt_mean = np.mean(sIoU_gt_all)
-        sIoU_pred_mean = np.mean(sIoU_pred_all)
+        tp_total = sum(r.tp for r in frame_results)
+        fn_total = sum(r.fn for r in frame_results)
+        fp_total = sum(r.fp for r in frame_results)
+        f1 = 2 * tp_total / (2 * tp_total + fn_total + fp_total)
+        sIoU_gt_mean = sum(np.sum(r.sIoU_gt) for r in frame_results) / sum(len(r.sIoU_gt) for r in frame_results)
+        sIoU_pred_mean = sum(np.sum(r.sIoU_pred) for r in frame_results) / sum(len(r.sIoU_pred) for r in frame_results)
 
         print("Number of TPs  :", tp_total)
         print("Number of FNs  :", fn_total)
         print("Number of FPs  :", fp_total)
+        print("F1 score       :", f1)
         print("Mean sIoU GT   :", sIoU_gt_mean)
         print("Mean sIoU PRED :", sIoU_pred_mean)
 
-        exit()
-        # TODO: returning the results
+        seg_info = ResultsInfo(
+            method_name=method_name,
+            dataset_name=dataset_name,
+            **EasyDict(tp=tp_total, fn=fn_total, fp=fp_total, f1=f1, sIoU_gt=sIoU_gt_mean, sIoU_pred=sIoU_pred_mean),
+        )
+
+        return seg_info
+
+    def persistence_path_data(self, method_name, dataset_name):
+        return DIR_OUTPUTS / self.name / 'data' / f'{self.name}Results_{method_name}_{dataset_name}.hdf5'
+
+    def save(self, aggregated_result, method_name: str, dataset_name: str, path_override: Path = None):
+        out_path = path_override or self.persistence_path_data(method_name, dataset_name)
+        aggregated_result.save(out_path)
+
+    def load(self, method_name: str, dataset_name: str, path_override: Path = None):
+        out_path = path_override or self.persistence_path_data(method_name, dataset_name)
+        return ResultsInfo.from_file(out_path)
+
+    def fields_for_table(self):
+        return ['sIoU_gt', 'fn', 'fp', 'f1']
