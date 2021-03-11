@@ -48,8 +48,7 @@ def default_instancer(anomaly_p: np.ndarray, label_pixel_gt: np.ndarray, thresh_
     return anomaly_instances[mask_roi], anomaly_seg_pred[mask_roi]
 
 
-
-def segment_metrics(anomaly_instances, anomaly_seg_pred, iou_threshold):
+def segment_metrics(anomaly_instances, anomaly_seg_pred, iou_thresholds):
     """
     function that computes the segments metrics based on the adjusted IoU
     anomaly_instances: (numpy array) anomaly instance annoation
@@ -94,11 +93,14 @@ def segment_metrics(anomaly_instances, anomaly_seg_pred, iou_threshold):
     size_gt = np.array((size_gt))
     size_pred = np.array(size_pred)
 
-    tp = np.count_nonzero(sIoU_gt >= iou_threshold)
-    fn = np.count_nonzero(sIoU_gt < iou_threshold)
-    fp = np.count_nonzero(sIoU_pred < iou_threshold)
+    """create results dictionary"""
+    results = EasyDict(sIoU_gt=sIoU_gt, sIoU_pred=sIoU_pred, size_gt=size_gt, size_pred=size_pred)
+    for t in iou_thresholds:
+        results["tp_" + str(int(t*100))] = np.count_nonzero(sIoU_gt >= t)
+        results["fn_" + str(int(t*100))] = np.count_nonzero(sIoU_gt < t)
+        results["fp_" + str(int(t*100))] = np.count_nonzero(sIoU_pred < t)
 
-    return EasyDict(tp=tp, fn=fn, fp=fp, sIoU_gt=sIoU_gt, sIoU_pred=sIoU_pred, size_gt=size_gt, size_pred=size_pred)
+    return results
 
 
 @dataclasses.dataclass
@@ -106,10 +108,19 @@ class ResultsInfo:
     method_name : str
     dataset_name : str
 
-    tp : int
-    fn : int
-    fp : int
-    f1 : float
+    tp_25 : int
+    tp_50 : int
+    tp_75 : int
+    fn_25 : int
+    fn_50 : int
+    fn_75 : int
+    fp_25 : int
+    fp_50 : int
+    fp_75 : int
+    f1_25 : float
+    f1_50 : float
+    f1_75 : float
+
     sIoU_gt : float
     sIoU_pred : float
 
@@ -130,9 +141,23 @@ class MetricSegment(EvaluationMetric):
         EasyDict(
             name='SegEval',
             thresh_p=None,
-            thresh_sIoU=0.5,
+            thresh_sIoU=[0.5],
             thresh_segsize=500,
             thresh_instsize=100,
+        ),
+        EasyDict(
+            name='SegEval-AnomalyTrack',
+            thresh_p=None,
+            thresh_sIoU=[0.25, 0.5, 0.75],
+            thresh_segsize=500,
+            thresh_instsize=100,
+        ),
+        EasyDict(
+            name='SegEval-ObstacleTrack',
+            thresh_p=None,
+            thresh_sIoU=[0.25, 0.5, 0.75],
+            thresh_segsize=10,
+            thresh_instsize=10,
         )
     ]
 
@@ -178,24 +203,30 @@ class MetricSegment(EvaluationMetric):
 
     def aggregate(self, frame_results: list, method_name: str, dataset_name: str):
 
-        tp_total = sum(r.tp for r in frame_results)
-        fn_total = sum(r.fn for r in frame_results)
-        fp_total = sum(r.fp for r in frame_results)
-        f1 = 2 * tp_total / (2 * tp_total + fn_total + fp_total)
         sIoU_gt_mean = sum(np.sum(r.sIoU_gt) for r in frame_results) / sum(len(r.sIoU_gt) for r in frame_results)
         sIoU_pred_mean = sum(np.sum(r.sIoU_pred) for r in frame_results) / sum(len(r.sIoU_pred) for r in frame_results)
-
-        print("Number of TPs  :", tp_total)
-        print("Number of FNs  :", fn_total)
-        print("Number of FPs  :", fp_total)
-        print("F1 score       :", f1)
+        ag_results = {"sIoU_gt" : sIoU_gt_mean, "sIoU_pred" : sIoU_pred_mean}
         print("Mean sIoU GT   :", sIoU_gt_mean)
         print("Mean sIoU PRED :", sIoU_pred_mean)
+        for t in self.cfg.thresh_sIoU:
+            tp_total = sum(r["tp_" + str(int(t*100))] for r in frame_results)
+            fn_total = sum(r["fn_" + str(int(t*100))] for r in frame_results)
+            fp_total = sum(r["fp_" + str(int(t*100))] for r in frame_results)
+            f1 = tp_total / (2 * tp_total + fn_total + fp_total)
+            ag_results["tp_" + str(int(t * 100))] = tp_total
+            ag_results["fn_" + str(int(t * 100))] = fn_total
+            ag_results["fp_" + str(int(t * 100))] = fp_total
+            ag_results["f1_" + str(int(t * 100))] = f1
+            print("---sIoU thresh =", t)
+            print("Number of TPs  :", tp_total)
+            print("Number of FNs  :", fn_total)
+            print("Number of FPs  :", fp_total)
+            print("F1 score       :", f1)
 
         seg_info = ResultsInfo(
             method_name=method_name,
             dataset_name=dataset_name,
-            **EasyDict(tp=tp_total, fn=fn_total, fp=fp_total, f1=f1, sIoU_gt=sIoU_gt_mean, sIoU_pred=sIoU_pred_mean),
+            **EasyDict(ag_results),
         )
 
         return seg_info
@@ -212,7 +243,7 @@ class MetricSegment(EvaluationMetric):
         return ResultsInfo.from_file(out_path)
 
     def fields_for_table(self):
-        return ['sIoU_gt', 'fn', 'fp', 'f1']
+        return ['sIoU_gt', 'sIoU_pred', 'fn_25', 'fp_25', 'f1_25', 'fn_50', 'fp_50', 'f1_50', 'fn_75', 'fp_75', 'f1_75']
 
     def get_thresh_p_from_curve(self, method_name, dataset_name):
         out_path = DIR_OUTPUTS / "PixBinaryClass" / 'data' / f'PixClassCurve_{method_name}_{dataset_name}.hdf5'
