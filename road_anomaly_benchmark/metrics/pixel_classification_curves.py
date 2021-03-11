@@ -34,6 +34,9 @@ class BinaryClassificationCurve:
 
 	recall50_threshold : float = -1
 
+	best_f1 : float = -1
+	best_f1_threshold : float = -1
+
 	def __iter__(self):
 		return dataclasses.asdict(self).items()
 
@@ -88,6 +91,7 @@ def curves_from_cmats(cmats, thresholds):
 
 	precisions = tp / (tp+fp)
 	recalls = tp / (tp+fn)
+	f1_scores = (2 * tp) / (2 * tp + fp + fn)
 
 	tpr95_index = np.searchsorted(tp_rates, 0.95)
 	if tpr95_index < tp_rates.shape[0]:
@@ -100,6 +104,10 @@ def curves_from_cmats(cmats, thresholds):
 
 	recall50_index = np.searchsorted(recalls, 0.50)
 	recall50_threshold = float(thresholds[recall50_index])
+
+	ix = np.argmax(f1_scores)
+	best_f1_threshold = float(thresholds[ix])
+	best_f1 = f1_scores[ix]
 
 	print(
 		'ap-sum', np.sum(np.diff(recalls) * precisions[:-1]),
@@ -123,6 +131,9 @@ def curves_from_cmats(cmats, thresholds):
 		tpr95_threshold = tpr95_threshold,
 
 		recall50_threshold = recall50_threshold,
+		best_f1_threshold = best_f1_threshold,
+		best_f1 = best_f1
+
 	)
 
 

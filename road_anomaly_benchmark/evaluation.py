@@ -74,8 +74,9 @@ class Evaluation:
 
 		metric = MetricRegistry.get(metric_name)
 		try:
-			if metric.cfg.thresh_p is None:
-				metric.get_thresh_p_from_curve(method_name=self.method_name, dataset_name=self.dataset_name)
+			if "Seg" in metric_name:
+				if metric.cfg.thresh_p is None:
+					metric.get_thresh_p_from_curve(self.method_name, self.dataset_name)
 		except AttributeError:
 			print("Perform 'PixBinaryClass' first")
 			exit()
@@ -142,8 +143,9 @@ class Evaluation:
 
 		metric = MetricRegistry.get(metric_name)
 		try:
-			if metric.cfg.thresh_p is None:
-				metric.get_thresh_p_from_curve(method_name=self.method_name, dataset_name=self.dataset_name)
+			if "Seg" in metric_name:
+				if metric.cfg.thresh_p is None:
+					metric.get_thresh_p_from_curve(self.method_name, self.dataset_name)
 		except AttributeError:
 			print("Perform 'PixBinaryClass' first")
 			exit()
