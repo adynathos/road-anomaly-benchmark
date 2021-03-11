@@ -60,7 +60,14 @@ A metric should implement the `EvaluationMetric` interface from ([road_anomaly_b
 See `MetricPixelClassification` from [road_anomaly_benchmark/metrics/pixel_classification.py](road_anomaly_benchmark/metrics/pixel_classification.py).
 
 
-* Calculate segment metrics (tested with Entropy Max and anomaly track)
+
+
+* Calculate segment metrics
+Anomaly Track
 ```bash
-python -m road_anomaly_benchmark metric SegIoU Entropy_max RoadAnomalyTrack-test
+python -m road_anomaly_benchmark metric SegEval-AnomalyTrack <method> RoadAnomalyTrack-test
+```
+Obstacle Track
+```bash
+python -m road_anomaly_benchmark metric SegEval-ObstacleTrack <method> RoadObstacleTrack-test
 ```
