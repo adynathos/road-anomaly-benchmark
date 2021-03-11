@@ -73,6 +73,11 @@ class Evaluation:
 		# TODO sample is part of evaluation
 
 		metric = MetricRegistry.get(metric_name)
+		try:
+			if metric.cfg.thresh_p is None:
+				metric.get_thresh_p_from_curve(method_name=self.method_name, dataset_name=self.dataset_name)
+		except AttributeError:
+			pass
 
 		fr_results = []
 
@@ -135,6 +140,11 @@ class Evaluation:
 	def run_metric_parallel(self, metric_name, sample=None, frame_vis=False):
 
 		metric = MetricRegistry.get(metric_name)
+		try:
+			if metric.cfg.thresh_p is None:
+				metric.get_thresh_p_from_curve(method_name=self.method_name, dataset_name=self.dataset_name)
+		except AttributeError:
+			pass
 		
 		if sample is not None:
 			dset_name, frame_indices = sample

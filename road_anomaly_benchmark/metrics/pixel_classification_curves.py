@@ -32,6 +32,8 @@ class BinaryClassificationCurve:
 	IOU_at_05: float = float('nan')
 	PDR_at_05: float = float('nan')
 
+	recall50_threshold : float = -1
+
 	def __iter__(self):
 		return dataclasses.asdict(self).items()
 
@@ -96,6 +98,9 @@ def curves_from_cmats(cmats, thresholds):
 		fpr_tpr95 = 1.0
 		tpr95_threshold = 0.0
 
+	recall50_index = np.searchsorted(recalls, 0.50)
+	recall50_threshold = float(thresholds[recall50_index])
+
 	print(
 		'ap-sum', np.sum(np.diff(recalls) * precisions[:-1]),
 		'ap-trapz', np.trapz(precisions, recalls),
@@ -116,6 +121,8 @@ def curves_from_cmats(cmats, thresholds):
 
 		tpr95_fpr = fpr_tpr95,
 		tpr95_threshold = tpr95_threshold,
+
+		recall50_threshold = recall50_threshold,
 	)
 
 

@@ -10,37 +10,62 @@ from pathlib import Path
 from .base import EvaluationMetric, MetricRegistry
 from ..evaluation import DIR_OUTPUTS
 from ..datasets.dataset_io import hdf5_write_hierarchy_to_file, hdf5_read_hierarchy_from_file
+from ..jupyter_show_image import adapt_img_data, imwrite
 
 
-def segment_metrics(anomaly_gt, anomaly_pred, iou_threshold):
-    """
-    function that computes the segments metrics based on the adjusted IoU
-    anomaly_gt: (numpy array) anomaly annoation
-    anomaly_pred: (numpy array) anomaly anomaly_pred
-    iou_threshold: (float) threshold for true positive
-    """
+def default_instancer(anomaly_p: np.ndarray, label_pixel_gt: np.ndarray, thresh_p: float,
+                      thresh_segsize: int, thresh_instsize: int = 0):
 
-    structure = np.ones((3, 3), dtype=np.int)
+    """segmentation from pixel-wise anoamly scores"""
+    segmentation = np.copy(anomaly_p)
+    segmentation[segmentation > thresh_p] = 1
+    segmentation[segmentation <= thresh_p] = 0
+
+    anomaly_gt = np.zeros(label_pixel_gt.shape)
+    anomaly_gt[label_pixel_gt == 1] = 1
+    anomaly_pred = np.zeros(label_pixel_gt.shape)
+    anomaly_pred[segmentation == 1] = 1
+    anomaly_pred[label_pixel_gt == 255] = 0
 
     """connected components"""
+    structure = np.ones((3, 3), dtype=np.int)
     anomaly_instances, n_anomaly = label(anomaly_gt, structure)
     anomaly_seg_pred, n_seg_pred = label(anomaly_pred, structure)
 
-    """remove connected compontents below a size threshold"""
-    # minimum_cc_sum  = 250
-    # labeled_mask = np.copy(anomaly_seg_pred)
-    # for comp in range(n_seg_pred):
-    #     if np.sum(anomaly_seg_pred[labeled_mask == comp]) < minimum_cc_sum:
-    #         anomaly_seg_pred[labeled_mask == comp] = 0
+    """remove connected compontents below size threshold"""
+    if thresh_segsize is not None:
+        minimum_cc_sum  = thresh_segsize
+        labeled_mask = np.copy(anomaly_seg_pred)
+        for comp in range(n_seg_pred+1):
+            if len(anomaly_seg_pred[labeled_mask == comp]) < minimum_cc_sum:
+                anomaly_seg_pred[labeled_mask == comp] = 0
+    labeled_mask = np.copy(anomaly_instances)
+    for comp in range(n_anomaly + 1):
+        if len(anomaly_instances[labeled_mask == comp]) < thresh_instsize:
+            label_pixel_gt[labeled_mask == comp] = 255
+
+    mask_roi = label_pixel_gt < 255
+    return anomaly_instances[mask_roi], anomaly_seg_pred[mask_roi]
+
+
+
+def segment_metrics(anomaly_instances, anomaly_seg_pred, iou_threshold):
+    """
+    function that computes the segments metrics based on the adjusted IoU
+    anomaly_instances: (numpy array) anomaly instance annoation
+    anomaly_seg_pred: (numpy array) anomaly instance prediction
+    iou_threshold: (float) threshold for true positive
+    """
 
     """Loop over ground truth instances"""
     sIoU_gt = []
     size_gt = []
-    for i in range(1, n_anomaly + 1):
+
+    for i in np.unique(anomaly_instances[anomaly_instances>0]):
         tp_loc = anomaly_seg_pred[anomaly_instances == i]
         seg_ind = np.unique(tp_loc[tp_loc != 0])
 
-        # calc area of intersection
+        """calc area of intersection"""
         intersection = len(tp_loc[np.isin(tp_loc, seg_ind)])
         adjustment = len(
             anomaly_seg_pred[np.logical_and(~np.isin(anomaly_instances, [0, i]), np.isin(anomaly_seg_pred, seg_ind))])
@@ -50,11 +75,10 @@ def segment_metrics(anomaly_gt, anomaly_pred, iou_threshold):
         sIoU_gt.append(intersection / adjusted_union)
         size_gt.append(np.sum(anomaly_instances == i))
 
-
     """Loop over prediction instances"""
     sIoU_pred = []
     size_pred = []
-    for i in range(1, n_seg_pred + 1):
+    for i in np.unique(anomaly_seg_pred[anomaly_seg_pred>0]):
         tp_loc = anomaly_instances[anomaly_seg_pred == i]
         seg_ind = np.unique(tp_loc[tp_loc != 0])
         intersection = len(tp_loc[np.isin(tp_loc, seg_ind)])
@@ -105,8 +129,10 @@ class MetricSegment(EvaluationMetric):
     configs = [
         EasyDict(
             name='SegEval',
-            thresh_p=0.8,
-            thresh_sIoU=0.5
+            thresh_p=None,
+            thresh_sIoU=0.5,
+            thresh_segsize=500,
+            thresh_instsize=100,
         )
     ]
 
@@ -114,7 +140,18 @@ class MetricSegment(EvaluationMetric):
     def name(self):
         return self.cfg.name
 
-    def process_frame(self, label_pixel_gt: np.ndarray, anomaly_p: np.ndarray, **_):
+    def vis_frame(self, fid, dset_name, method_name, mask_roi, anomaly_p, image=None, **_):
+        segmentation = np.copy(anomaly_p)
+        segmentation[segmentation > self.cfg.thresh_p] = 1
+        segmentation[segmentation <= self.cfg.thresh_p] = 0
+        h, w = mask_roi.shape[:2]
+        canvas = image.copy() if image is not None else np.zeros((h, w, 3), dtype=np.uint8)
+        heatmap_color = adapt_img_data(segmentation)
+        canvas[mask_roi] = canvas[mask_roi] // 2 + heatmap_color[mask_roi] // 2
+        imwrite(DIR_OUTPUTS / f'vis_SegPred' / method_name / dset_name / f'{fid}.webp', canvas)
+
+    def process_frame(self, label_pixel_gt: np.ndarray, anomaly_p: np.ndarray, fid : str=None, dset_name : str=None,
+                      method_name : str=None, visualize : bool = True, **_):
         """
         @param label_pixel_gt: HxW uint8
             0 = in-distribution / road
@@ -122,25 +159,20 @@ class MetricSegment(EvaluationMetric):
             255 = void / ignore
         @param anomaly_p: HxW float16
             heatmap of per-pixel anomaly detection, value from 0 to 1
+        @param visualize: bool
+            saves an image with segment predictions
         """
 
-        segmentation = np.copy(anomaly_p)
-        segmentation[segmentation > self.cfg.thresh_p] = 1
-        segmentation[segmentation <= self.cfg.thresh_p] = 0
-
-        anomaly_gt = np.zeros(label_pixel_gt.shape)
-        anomaly_gt[label_pixel_gt == 1] = 1
-        anomaly_pred = np.zeros(label_pixel_gt.shape)
-        anomaly_pred[segmentation == 1] = 1
-        anomaly_pred[label_pixel_gt == 255] = 0
+        mask_roi = label_pixel_gt < 255
+        anomaly_gt, anomaly_pred = default_instancer(anomaly_p, label_pixel_gt, self.cfg.thresh_p,
+                                                     self.cfg.thresh_segsize, self.cfg.thresh_instsize)
 
         results = segment_metrics(anomaly_gt, anomaly_pred, self.cfg.thresh_sIoU)
 
-        # from PIL import Image
-        # Image.fromarray((anomaly_pred*255).astype("uint8")).save("pred.png")
-        # Image.fromarray((anomaly_gt * 255).astype("uint8")).save("gt.png")
-        # Image.fromarray((label_pixel_gt).astype("uint8")).save("void.png")
-        # exit()
+
+        if visualize and fid is not None and dset_name is not None and method_name is not None:
+            self.vis_frame(fid=fid, dset_name=dset_name, method_name=method_name, mask_roi=mask_roi,
+                           anomaly_p=anomaly_p, **_)
 
         return results
 
@@ -181,3 +213,8 @@ class MetricSegment(EvaluationMetric):
 
     def fields_for_table(self):
         return ['sIoU_gt', 'fn', 'fp', 'f1']
+
+    def get_thresh_p_from_curve(self, method_name, dataset_name):
+        out_path = DIR_OUTPUTS / "PixBinaryClass" / 'data' / f'PixClassCurve_{method_name}_{dataset_name}.hdf5'
+        pixel_results = hdf5_read_hierarchy_from_file(out_path)
+        self.cfg.thresh_p = pixel_results.recall50_threshold
