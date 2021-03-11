@@ -77,7 +77,8 @@ class Evaluation:
 			if metric.cfg.thresh_p is None:
 				metric.get_thresh_p_from_curve(method_name=self.method_name, dataset_name=self.dataset_name)
 		except AttributeError:
-			pass
+			print("Perform 'PixBinaryClass' first")
+			exit()
 
 		fr_results = []
 
@@ -144,7 +145,8 @@ class Evaluation:
 			if metric.cfg.thresh_p is None:
 				metric.get_thresh_p_from_curve(method_name=self.method_name, dataset_name=self.dataset_name)
 		except AttributeError:
-			pass
+			print("Perform 'PixBinaryClass' first")
+			exit()
 		
 		if sample is not None:
 			dset_name, frame_indices = sample

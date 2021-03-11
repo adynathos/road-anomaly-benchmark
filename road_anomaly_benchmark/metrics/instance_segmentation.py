@@ -18,8 +18,8 @@ def default_instancer(anomaly_p: np.ndarray, label_pixel_gt: np.ndarray, thresh_
 
     """segmentation from pixel-wise anoamly scores"""
     segmentation = np.copy(anomaly_p)
-    segmentation[segmentation > thresh_p] = 1
-    segmentation[segmentation <= thresh_p] = 0
+    segmentation[anomaly_p > thresh_p] = 1
+    segmentation[anomaly_p <= thresh_p] = 0
 
     anomaly_gt = np.zeros(label_pixel_gt.shape)
     anomaly_gt[label_pixel_gt == 1] = 1
@@ -156,7 +156,7 @@ class MetricSegment(EvaluationMetric):
             name='SegEval-ObstacleTrack',
             thresh_p=None,
             thresh_sIoU=[0.25, 0.5, 0.75],
-            thresh_segsize=10,
+            thresh_segsize=50,
             thresh_instsize=10,
         )
     ]
@@ -167,8 +167,8 @@ class MetricSegment(EvaluationMetric):
 
     def vis_frame(self, fid, dset_name, method_name, mask_roi, anomaly_p, image=None, **_):
         segmentation = np.copy(anomaly_p)
-        segmentation[segmentation > self.cfg.thresh_p] = 1
-        segmentation[segmentation <= self.cfg.thresh_p] = 0
+        segmentation[anomaly_p > self.cfg.thresh_p] = 1
+        segmentation[anomaly_p <= self.cfg.thresh_p] = 0
         h, w = mask_roi.shape[:2]
         canvas = image.copy() if image is not None else np.zeros((h, w, 3), dtype=np.uint8)
         heatmap_color = adapt_img_data(segmentation)
@@ -194,7 +194,6 @@ class MetricSegment(EvaluationMetric):
 
         results = segment_metrics(anomaly_gt, anomaly_pred, self.cfg.thresh_sIoU)
 
-
         if visualize and fid is not None and dset_name is not None and method_name is not None:
             self.vis_frame(fid=fid, dset_name=dset_name, method_name=method_name, mask_roi=mask_roi,
                            anomaly_p=anomaly_p, **_)
@@ -212,7 +211,7 @@ class MetricSegment(EvaluationMetric):
             tp_total = sum(r["tp_" + str(int(t*100))] for r in frame_results)
             fn_total = sum(r["fn_" + str(int(t*100))] for r in frame_results)
             fp_total = sum(r["fp_" + str(int(t*100))] for r in frame_results)
-            f1 = tp_total / (2 * tp_total + fn_total + fp_total)
+            f1 = (2 * tp_total) / (2 * tp_total + fn_total + fp_total)
             ag_results["tp_" + str(int(t * 100))] = tp_total
             ag_results["fn_" + str(int(t * 100))] = fn_total
             ag_results["fp_" + str(int(t * 100))] = fp_total
