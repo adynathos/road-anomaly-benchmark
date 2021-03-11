@@ -141,7 +141,7 @@ class MetricSegment(EvaluationMetric):
         EasyDict(
             name='SegEval',
             thresh_p=None,
-            thresh_sIoU=[0.5],
+            thresh_sIoU=[0.25, 0.5, 0.75],
             thresh_segsize=500,
             thresh_instsize=100,
         ),
@@ -247,4 +247,12 @@ class MetricSegment(EvaluationMetric):
     def get_thresh_p_from_curve(self, method_name, dataset_name):
         out_path = DIR_OUTPUTS / "PixBinaryClass" / 'data' / f'PixClassCurve_{method_name}_{dataset_name}.hdf5'
         pixel_results = hdf5_read_hierarchy_from_file(out_path)
-        self.cfg.thresh_p = pixel_results.recall50_threshold
+        if "best_f1_threshold" in pixel_results.keys():
+            self.cfg.thresh_p = pixel_results.best_f1_threshold
+        else:
+            prc = pixel_results.curve_precision
+            rec = pixel_results.curve_recall
+            f1_scores = (2 * prc * rec) / (prc + rec)
+            ix = np.argmax(f1_scores)
+            self.cfg.thresh_p  = float(pixel_results.thresholds[ix])
+
