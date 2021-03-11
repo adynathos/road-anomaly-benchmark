@@ -77,14 +77,14 @@ class DatasetAnomalyTrack(DatasetRA):
 			classes = dict(
 				usual = 0,
 				anomaly = 1,
-				ignore = 2,
+				ignore = 255,
 			),
 		),
 	]
 
 	channels = {
 		'image': ChannelLoaderImage("{dset.cfg.dir_root}/images/{fid}.{dset.cfg.img_fmt}"),
-		'semantic_class_gt': ChannelLoaderImage("{dset.cfg.dir_root}/labels_final/{fid}_labels_semantic.png"),
+		'semantic_class_gt': ChannelLoaderImage("{dset.cfg.dir_root}/labels_masks/{fid}_labels_semantic.png"),
 	}
 
 
@@ -108,14 +108,14 @@ class DatasetObstacleTrack(DatasetRA):
 		dict(
 			name = 'RoadObstacleTrack-test',
 			dir_root = DIR_DATASETS / 'dataset_RoadObstacleTrack',
-			img_fmt = 'jpg',
+			img_fmt = 'webp',
 			classes = dict(
 				road = 0,
-				obstacle = 254,
-				ignore = 253,
+				obstacle = 1,
+				ignore = 255,
 
 				usual = 0,
-				anomaly = 254,
+				anomaly = 1,
 			),
 		),	
 	]
