@@ -62,12 +62,13 @@ See `MetricPixelClassification` from [road_anomaly_benchmark/metrics/pixel_class
 
 
 
-* Calculate segment metrics
-Anomaly Track
+### Calculate segment metrics
+
+* Anomaly Track
 ```bash
 python -m road_anomaly_benchmark metric SegEval-AnomalyTrack <method> RoadAnomalyTrack-test
 ```
-Obstacle Track
+* Obstacle Track
 ```bash
 python -m road_anomaly_benchmark metric SegEval-ObstacleTrack <method> RoadObstacleTrack-test
 ```
