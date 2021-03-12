@@ -253,6 +253,6 @@ class MetricSegment(EvaluationMetric):
             prc = pixel_results.curve_precision
             rec = pixel_results.curve_recall
             f1_scores = (2 * prc * rec) / (prc + rec)
-            ix = np.argmax(f1_scores)
+            ix = np.nanargmax(f1_scores)
             self.cfg.thresh_p  = float(pixel_results.thresholds[ix])
 
