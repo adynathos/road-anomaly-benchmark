@@ -411,7 +411,7 @@ class ROSubset(DatasetBase):
 		else:
 			fid = self.FRAME_IDS[self.cfg.split][idx_or_fid]
 
-		fr = self.base_ds[fid]
+		fr = self.base_ds.get_frame(fid, *channels)
 		return fr
 
 	def __len__(self):
