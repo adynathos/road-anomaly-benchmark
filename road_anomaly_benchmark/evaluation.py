@@ -73,6 +73,13 @@ class Evaluation:
 		# TODO sample is part of evaluation
 
 		metric = MetricRegistry.get(metric_name)
+		try:
+			if "Seg" in metric_name:
+				if metric.cfg.thresh_p is None:
+					metric.get_thresh_p_from_curve(self.method_name, self.dataset_name)
+		except AttributeError:
+			print("Perform 'PixBinaryClass' first")
+			exit()
 
 		fr_results = []
 
@@ -135,6 +142,13 @@ class Evaluation:
 	def run_metric_parallel(self, metric_name, sample=None, frame_vis=False):
 
 		metric = MetricRegistry.get(metric_name)
+		try:
+			if "Seg" in metric_name:
+				if metric.cfg.thresh_p is None:
+					metric.get_thresh_p_from_curve(self.method_name, self.dataset_name)
+		except AttributeError:
+			print("Perform 'PixBinaryClass' first")
+			exit()
 		
 		if sample is not None:
 			dset_name, frame_indices = sample

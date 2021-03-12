@@ -77,7 +77,7 @@ class DatasetAnomalyTrack(DatasetRA):
 			classes = dict(
 				usual = 0,
 				anomaly = 1,
-				ignore = 2,
+				ignore = 255,
 			),
 		),
 	]
@@ -108,14 +108,14 @@ class DatasetObstacleTrack(DatasetRA):
 		dict(
 			name = 'RoadObstacleTrack-test',
 			dir_root = DIR_DATASETS / 'dataset_RoadObstacleTrack',
-			img_fmt = 'jpg',
+			img_fmt = 'webp',
 			classes = dict(
 				road = 0,
-				obstacle = 254,
-				ignore = 253,
+				obstacle = 1,
+				ignore = 255,
 
 				usual = 0,
-				anomaly = 254,
+				anomaly = 1,
 			),
 		),
 	]
@@ -253,3 +253,74 @@ class DatasetLostAndFound(DatasetRA):
 		self.set_frames(frames)
 		self.check_size()
 
+
+@DatasetRegistry.register_class()
+class DatasetSmallObstacle(DatasetRA):
+	configs = [
+		dict(
+			name='SmallObstacleDataset-train',
+			split='train',
+			dir_root='/home/datasets/Small_Obstacle_Dataset',
+			classes=dict(
+				road=1,
+				obstacle=2,
+				ignore=0,
+			),
+		),
+		dict(
+			name='SmallObstacleDataset-test',
+			split='test',
+			dir_root='/home/datasets/Small_Obstacle_Dataset',
+			classes=dict(
+				road=1,
+				obstacle=2,
+				ignore=0,
+			),
+		),
+		dict(
+			name='SmallObstacleDataset-val',
+			split='val',
+			dir_root='/home/datasets/Small_Obstacle_Dataset',
+			classes=dict(
+				road=1,
+				obstacle=2,
+				ignore=0,
+			),
+		),
+	]
+
+	channels = {
+		'image': ChannelLoaderImage("{dset.cfg.dir_root}/{dset.cfg.split}/{direc}/image/{fid}.png"),
+		'semantic_class_gt': ChannelLoaderImage("{dset.cfg.dir_root}/{dset.cfg.split}/{direc}/labels/{fid}.png"),
+	}
+
+	def sod_id_from_image_path(cls, path, **_):
+		fid = path.stem
+		direc = str(fid).split('_')[0] + '_' + str(fid).split('_')[1]
+		return EasyDict(
+			fid=fid,
+			direc=direc
+		)
+
+	def discover(self):
+		img_dir = Path(self.cfg.dir_root) / self.cfg.split
+
+		for img_ext in ['png', 'webp', 'jpg']:
+			img_files = list(img_dir.glob(f'*/labels/*.{img_ext}'))
+			if img_files:
+				break
+
+		if not img_files:
+			raise FileNotFoundError(f'Did not find images at {img_dir}')
+
+		log.info(f'SOD: found images in {img_ext} format')
+		self.img_fmt = img_ext
+
+		frames = [
+			self.sod_id_from_image_path(p)
+			for p in img_files
+		]
+		frames.sort(key=itemgetter('fid'))
+
+		self.set_frames(frames)
+		self.check_size()
