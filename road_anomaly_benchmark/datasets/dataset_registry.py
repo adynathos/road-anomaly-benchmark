@@ -61,6 +61,8 @@ class Registry:
 			for cfg in configs:
 				self.register(cfg['name'], partial(class_to_register, cfg))	
 
+			return class_to_register
+
 		return decorator
 
 

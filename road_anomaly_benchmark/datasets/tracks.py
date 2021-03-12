@@ -196,6 +196,9 @@ class DatasetLostAndFound(DatasetRA):
 		'semantic_class_gt': ChannelLoaderImage(
 			'{dset.cfg.dir_root}/gtCoarse/{dset.cfg.split}/{scene_id:02d}_{scene_name}/{fid}_gtCoarse_labelIds.png',
 		),
+		# 'semantic_class_gt_tid': ChannelLoaderImage(
+		# 	'{dset.cfg.dir_root}/gtCoarse/{dset.cfg.split}/{scene_id:02d}_{scene_name}/{fid}_gtCoarse_labelTrainIds.png',
+		# ),
 		'instances': ChannelLoaderImage(
 			'{dset.cfg.dir_root}/gtCoarse/{dset.cfg.split}/{scene_id:02d}_{scene_name}/{fid}_gtCoarse_instanceIds.png',
 		),
