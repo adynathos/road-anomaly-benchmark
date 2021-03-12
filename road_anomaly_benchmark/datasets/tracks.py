@@ -71,8 +71,8 @@ class DatasetAnomalyTrack(DatasetRA):
 
 	configs = [
 		dict(
-			name = 'RoadAnomalyTrack-test',
-			dir_root = DIR_DATASETS / 'dataset_RoadAnomalyTrack',
+			name = 'AnomalyTrack-test',
+			dir_root = DIR_DATASETS / 'dataset_AnomalyTrack',
 			img_fmt = 'jpg',
 			classes = dict(
 				usual = 0,
@@ -84,7 +84,7 @@ class DatasetAnomalyTrack(DatasetRA):
 
 	channels = {
 		'image': ChannelLoaderImage("{dset.cfg.dir_root}/images/{fid}.{dset.cfg.img_fmt}"),
-		'semantic_class_gt': ChannelLoaderImage("{dset.cfg.dir_root}/labels_final/{fid}_labels_semantic.png"),
+		'semantic_class_gt': ChannelLoaderImage("{dset.cfg.dir_root}/labels_masks/{fid}_labels_semantic.png"),
 	}
 
 
@@ -117,7 +117,7 @@ class DatasetObstacleTrack(DatasetRA):
 				usual = 0,
 				anomaly = 254,
 			),
-		),	
+		),
 	]
 
 	channels = {
@@ -169,7 +169,7 @@ class DatasetLostAndFound(DatasetRA):
 			name = 'LostAndFound-train',
 			split = 'train',
 			dir_root = DIR_LAF,
-			
+
 			# invalid frames are those where np.count_nonzero(labels_source) is 0
 			invalid_labeled_frames = [44,  67,  88, 109, 131, 614],
 			expected_length = 1030,
@@ -180,7 +180,7 @@ class DatasetLostAndFound(DatasetRA):
 			name = 'LostAndFound-test',
 			split = 'test',
 			dir_root = DIR_LAF,
-			
+
 			# invalid frames are those where np.count_nonzero(labels_source) is 0
 			invalid_labeled_frames = [17,  37,  55,  72,  91, 110, 129, 153, 174, 197, 218, 353, 490, 618, 686, 792, 793],
 			expected_length = 1186,
@@ -230,20 +230,20 @@ class DatasetLostAndFound(DatasetRA):
 		if not img_files:
 			raise FileNotFoundError(f'Did not find images at {img_dir}')
 
-		
+
 		log.info(f'LAF: found images in {img_ext} format')
 		self.img_fmt = img_ext
-		
+
 		# LAF's PNG images contain a gamma value which makes them washed out, ignore it
 		# if img_ext == '.png':
 			# self.channels['image'].opts['ignoregamma'] = True
-		
+
 		frames = [
 			self.laf_id_from_image_path(p)
 			for p in img_files
 		]
 		frames.sort(key = itemgetter('fid'))
-		
+
 		# remove invalid labeled frames
 		invalid_indices = self.cfg.invalid_labeled_frames
 		valid_indices = np.delete(np.arange(frames.__len__()), invalid_indices)
