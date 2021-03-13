@@ -40,11 +40,13 @@ class DatasetRA(DatasetBase):
 		if desired_len is not None and actual_len != desired_len:
 			raise ValueError(f'The dataset should have {desired_len} frames but found {actual_len}')
 
-	def __getitem__(self, key):
-		"""
+	def get_frame(self, key, *channels):
 
-		"""
-		fr = super().__getitem__(key)
+		channels = set(channels)
+		if 'label_pixel_gt' in channels:
+			channels.remove('label_pixel_gt')
+
+		fr = super().get_frame(key, *channels)
 
 		sem_gt = fr.get('semantic_class_gt')
 		if sem_gt is not None:
