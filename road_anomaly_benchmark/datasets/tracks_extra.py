@@ -1,10 +1,12 @@
 
 
-from .dataset_io import DatasetBase
+from .dataset_io import DatasetBase, imread
 from .dataset_registry import DatasetRegistry
 
 from pathlib import Path
 import json, os
+
+import numpy as np
 
 def read_json(path, key=None, allow_failure=False):
 	try:
@@ -182,12 +184,58 @@ class FishyscapesLAFSubset(DatasetBase):
 		else:
 			base_ds = self.laf_dsets['test']
 
-		fr = base_ds[fid]
+		fr = base_ds.get_frame(fid, *channels)
 
 		return fr
 
 	def __len__(self):
 		return self.fids.__len__()
+
+
+@DatasetRegistry.register_class()
+class LostAndFoundAnomaly(DatasetBase):
+	"""
+	LAF obstacles, but the ROI is the whole image 
+	(except ego vehicle and sensor artifacts)
+	not just the drivable space.
+	"""
+	configs = [
+		dict(
+			name = 'LostAndFound-anomalyTrain',
+			base_ds = 'LostAndFound-train',
+			roi_img = Path(__file__).with_name('LAF_roi_2048.png'),
+		),
+		dict(
+			name = 'LostAndFound-anomalyTest',
+			base_ds = 'LostAndFound-test',
+			roi_img = Path(__file__).with_name('LAF_roi_2048.png'),
+		),
+	]
+
+	def __init__(self, cfg):
+		super().__init__(cfg)
+		self.discover()
+		
+	def discover(self):
+		self.base_ds = DatasetRegistry.get(self.cfg.base_ds)
+		self.roi_mask = imread(self.cfg.roi_img).astype(bool)
+
+	def get_frame(self, idx_or_fid, *channels):
+		fr = self.base_ds.get_frame(idx_or_fid, *channels)
+
+		pix_gt = fr.get('label_pixel_gt')
+		if pix_gt is not None:
+			h, w = pix_gt.shape[:2]
+			label = np.full((h, w), 255, dtype=np.uint8)
+			label[self.roi_mask] = 0
+			label[pix_gt == 1] = 1
+			fr['label_pixel_gt'] = label
+
+		return fr
+
+	def __len__(self):
+		return self.base_ds.__len__()
+
 
 
 @DatasetRegistry.register_class()
