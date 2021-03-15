@@ -72,12 +72,18 @@ python -m road_anomaly_benchmark metric SegEval-ObstacleTrack $methods ObstacleT
 ```bash
 python -m road_anomaly_benchmark comparison MyComparison metric1,metric2 method1,method2 dset1,dset2
 ```
-For example
-```
+
+* Anomaly splits: *RoadAnomalyTrack-test, FishyLAFAnomaly-val*
+
+```bash
 # Anomaly tables
 python -m road_anomaly_benchmark comparison TableAnomaly1 PixBinaryClass,SegEval-AnomalyTrack $methods_ano RoadAnomalyTrack-test
 python -m road_anomaly_benchmark comparison TableAnomaly2 PixBinaryClass,SegEval-AnomalyTrack $methods_ano FishyLAFAnomaly-val
+```
 
+* Obstacle splits: *ObstacleTrack-test, LostAndFound-testNoKnown*
+
+```bash
 # Obstacle tables
 python -m road_anomaly_benchmark comparison TableObstacle1 PixBinaryClass,SegEval-ObstacleTrack $methods_obs ObstacleTrack-test
 python -m road_anomaly_benchmark comparison TableObstacle2 PixBinaryClass,SegEval-ObstacleTrack $methods_obs LostAndFound-testNoKnown
