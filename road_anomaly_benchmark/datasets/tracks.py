@@ -81,6 +81,7 @@ class DatasetAnomalyTrack(DatasetRA):
 				anomaly = 1,
 				ignore = 255,
 			),
+			expected_length = 100,
 		),
 	]
 
@@ -121,30 +122,35 @@ class DatasetObstacleTrack(DatasetRA):
 			# default: exclude special weather and night
 			name = 'ObstacleTrack-test',
 			scenes = SCENES_ALL.difference({'snowstorm1', 'snowstorm2', 'driveway'}),
+			expected_length = 327,
 			**DEFAULTS,
 		),
 		dict(
 			# all
 			name = 'ObstacleTrack-all',
 			scenes = SCENES_ALL,
+			expected_length = 412,
 			**DEFAULTS,
 		),
 		dict(
 			# exclude night
 			name = 'ObstacleTrack-noNight',
 			scenes = SCENES_ALL.difference({'driveway'}),
+			expected_length = 382,
 			**DEFAULTS,
 		),
 		dict(
 			# night
 			name = 'ObstacleTrack-night',
 			scenes = {'driveway'},
+			expected_length = 30,
 			**DEFAULTS,
 		),
 		dict(
 			# night
 			name = 'ObstacleTrack-snowstorm',
 			scenes = {'snowstorm1', 'snowstorm2'},
+			expected_length = 55,
 			**DEFAULTS,
 		),
 	]
