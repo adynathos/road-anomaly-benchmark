@@ -48,7 +48,7 @@ def default_instancer(anomaly_p: np.ndarray, label_pixel_gt: np.ndarray, thresh_
     return anomaly_instances[mask_roi], anomaly_seg_pred[mask_roi]
 
 
-def segment_metrics(anomaly_instances, anomaly_seg_pred, iou_thresholds):
+def segment_metrics(anomaly_instances, anomaly_seg_pred, iou_thresholds=np.linspace(0.25, 0.75, 11, endpoint=True)):
     """
     function that computes the segments metrics based on the adjusted IoU
     anomaly_instances: (numpy array) anomaly instance annoation
@@ -111,15 +111,22 @@ class ResultsInfo:
     tp_25 : int
     tp_50 : int
     tp_75 : int
-    fn_25 : int
-    fn_50 : int
-    fn_75 : int
+    tp_mean : float
+
     fp_25 : int
     fp_50 : int
     fp_75 : int
+    fp_mean : float
+
+    fn_25 : int
+    fn_50 : int
+    fn_75 : int
+    fn_mean : float
+
     f1_25 : float
     f1_50 : float
     f1_75 : float
+    f1_mean : float
 
     sIoU_gt : float
     sIoU_pred : float
@@ -141,21 +148,21 @@ class MetricSegment(EvaluationMetric):
         EasyDict(
             name='SegEval',
             thresh_p=None,
-            thresh_sIoU=[0.25, 0.5, 0.75],
+            thresh_sIoU=np.linspace(0.25, 0.75, 11, endpoint=True),
             thresh_segsize=500,
             thresh_instsize=100,
         ),
         EasyDict(
             name='SegEval-AnomalyTrack',
             thresh_p=None,
-            thresh_sIoU=[0.25, 0.5, 0.75],
+            thresh_sIoU=np.linspace(0.25, 0.75, 11, endpoint=True),
             thresh_segsize=500,
             thresh_instsize=100,
         ),
         EasyDict(
             name='SegEval-ObstacleTrack',
             thresh_p=None,
-            thresh_sIoU=[0.25, 0.5, 0.75],
+            thresh_sIoU=np.linspace(0.25, 0.75, 11, endpoint=True),
             thresh_segsize=50,
             thresh_instsize=10,
         )
@@ -204,23 +211,39 @@ class MetricSegment(EvaluationMetric):
 
         sIoU_gt_mean = sum(np.sum(r.sIoU_gt) for r in frame_results) / sum(len(r.sIoU_gt) for r in frame_results)
         sIoU_pred_mean = sum(np.sum(r.sIoU_pred) for r in frame_results) / sum(len(r.sIoU_pred) for r in frame_results)
-        ag_results = {"sIoU_gt" : sIoU_gt_mean, "sIoU_pred" : sIoU_pred_mean}
+        ag_results = {"tp_mean" : 0, "fn_mean" : 0, "fp_mean" : 0, "f1_mean" : 0,
+                      "sIoU_gt" : sIoU_gt_mean, "sIoU_pred" : sIoU_pred_mean}
         print("Mean sIoU GT   :", sIoU_gt_mean)
         print("Mean sIoU PRED :", sIoU_pred_mean)
         for t in self.cfg.thresh_sIoU:
-            tp_total = sum(r["tp_" + str(int(t*100))] for r in frame_results)
-            fn_total = sum(r["fn_" + str(int(t*100))] for r in frame_results)
-            fp_total = sum(r["fp_" + str(int(t*100))] for r in frame_results)
-            f1 = (2 * tp_total) / (2 * tp_total + fn_total + fp_total)
-            ag_results["tp_" + str(int(t * 100))] = tp_total
-            ag_results["fn_" + str(int(t * 100))] = fn_total
-            ag_results["fp_" + str(int(t * 100))] = fp_total
-            ag_results["f1_" + str(int(t * 100))] = f1
+            tp = sum(r["tp_" + str(int(t*100))] for r in frame_results)
+            fn = sum(r["fn_" + str(int(t*100))] for r in frame_results)
+            fp = sum(r["fp_" + str(int(t*100))] for r in frame_results)
+            f1 = (2 * tp) / (2 * tp + fn + fp)
+            if t in [0.25, 0.50, 0.75]:
+                ag_results["tp_" + str(int(t * 100))] = tp
+                ag_results["fn_" + str(int(t * 100))] = fn
+                ag_results["fp_" + str(int(t * 100))] = fp
+                ag_results["f1_" + str(int(t * 100))] = f1
             print("---sIoU thresh =", t)
-            print("Number of TPs  :", tp_total)
-            print("Number of FNs  :", fn_total)
-            print("Number of FPs  :", fp_total)
+            print("Number of TPs  :", tp)
+            print("Number of FNs  :", fn)
+            print("Number of FPs  :", fp)
             print("F1 score       :", f1)
+            ag_results["tp_mean"] += tp
+            ag_results["fn_mean"] += fn
+            ag_results["fp_mean"] += fp
+            ag_results["f1_mean"] += f1
+
+        ag_results["tp_mean"] /= len(self.cfg.thresh_sIoU)
+        ag_results["fn_mean"] /= len(self.cfg.thresh_sIoU)
+        ag_results["fp_mean"] /= len(self.cfg.thresh_sIoU)
+        ag_results["f1_mean"] /= len(self.cfg.thresh_sIoU)
+        print("---sIoU thresh averaged")
+        print("Number of TPs  :", ag_results["tp_mean"])
+        print("Number of FNs  :", ag_results["fn_mean"])
+        print("Number of FPs  :", ag_results["fp_mean"])
+        print("F1 score       :", ag_results["f1_mean"])
 
         seg_info = ResultsInfo(
             method_name=method_name,
@@ -242,7 +265,8 @@ class MetricSegment(EvaluationMetric):
         return ResultsInfo.from_file(out_path)
 
     def fields_for_table(self):
-        return ['sIoU_gt', 'sIoU_pred', 'fn_25', 'fp_25', 'f1_25', 'fn_50', 'fp_50', 'f1_50', 'fn_75', 'fp_75', 'f1_75']
+        return ['sIoU_gt', 'sIoU_pred', 'fn_25', 'fp_25', 'f1_25', 'fn_50', 'fp_50', 'f1_50',
+                'fn_75', 'fp_75', 'f1_75', 'f1_mean']
 
     def get_thresh_p_from_curve(self, method_name, dataset_name):
         out_path = DIR_OUTPUTS / "PixBinaryClass" / 'data' / f'PixClassCurve_{method_name}_{dataset_name}.hdf5'
