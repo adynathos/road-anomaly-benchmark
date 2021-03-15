@@ -271,10 +271,19 @@ class MetricPixelClassification(EvaluationMetric):
 		out_path = path_override or self.persistence_path_data(method_name, dataset_name)
 		aggregated_result.save(out_path)
 
+		c_lowres = reduce_curve_resolution(aggregated_result, num_pts=256)
+		c_lowres.save(out_path.with_name(out_path.name.replace('PixClassCurve', 'PixClassCurve-simplified')))
+
 	def load(self, method_name : str, dataset_name : str, path_override : Path = None):
 		out_path = path_override or self.persistence_path_data(method_name, dataset_name)
-		
-		return BinaryClassificationCurve.from_file(out_path)
+		out_path_simplified = out_path.with_name(out_path.name.replace('PixClassCurve', 'PixClassCurve-simplified'))
+
+		if out_path.is_file():
+			return BinaryClassificationCurve.from_file(out_path)
+		elif out_path_simplified.is_file():
+			return BinaryClassificationCurve.from_file(out_path_simplified)
+		else:
+			raise FileNotFoundError(f'No saved curve at {out_path} or {out_path_simplified}')
 
 	def fields_for_table(self):
 		return ['area_PRC', 'tpr95_fpr']
