@@ -177,7 +177,7 @@ class DatasetBase:
 		else:
 			fr = self.frames_by_fid[idx_or_fid]
 		
-		out_fr = EasyDict(fr, dset_name = self.cfg.name)
+		out_fr = EasyDict(fr, dset_name = self.cfg.get('name_for_persistence', self.cfg.name))
 
 		channels = channels or self.channels.keys()
 

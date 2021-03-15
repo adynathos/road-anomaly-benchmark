@@ -237,7 +237,8 @@ class DatasetLostAndFound(DatasetRA):
 		dict(
 			name = 'LostAndFound-trainValid',
 			split = 'train',
-			
+			name_for_persistence = 'LostAndFound-train',
+
 			# invalid frames are those where np.count_nonzero(labels_source) is 0
 			exclude_frame_indices = [44,  67,  88, 109, 131, 614],
 			expected_length = 1030,
@@ -246,6 +247,7 @@ class DatasetLostAndFound(DatasetRA):
 		),
 		dict(
 			name = 'LostAndFound-testValid',
+			name_for_persistence = 'LostAndFound-test',
 			split = 'test',
 			
 			# invalid frames are those where np.count_nonzero(labels_source) is 0
@@ -258,6 +260,7 @@ class DatasetLostAndFound(DatasetRA):
 		dict(
 			# valid test set, excluding known objects - pedestrians and bicycles
 			name = 'LostAndFound-testNoKnown',
+			name_for_persistence = 'LostAndFound-test',
 			split = 'test',
 			
 			# invalid frames are those where np.count_nonzero(labels_source) is 0
