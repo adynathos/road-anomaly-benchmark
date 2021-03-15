@@ -93,33 +93,60 @@ class DatasetAnomalyTrack(DatasetRA):
 @DatasetRegistry.register_class()
 class DatasetObstacleTrack(DatasetRA):
 
+	CLASS_IDS = dict(
+		road = 0,
+		obstacle = 1,
+		ignore = 255,
+
+		usual = 0,
+		anomaly = 1,
+	)
+
+	DEFAULTS = dict(
+		dir_root = DIR_DATASETS / 'dataset_ObstacleTrack',
+		img_fmt = 'webp',
+		classes = CLASS_IDS,
+	)
+
+	SCENES_ALL = {
+		'curvy-street', 'one-way-street', # obstacle track
+		'gravel', 'greyasphalt', 'motorway', 'paving', 'darkasphalt', # RO 2020
+		'darkasphalt2', # RO 2020 dog
+		'snowstorm1', 'snowstorm2', # RO 2021 
+		'driveway', # night
+	}
+
 	configs = [
 		dict(
+			# default: exclude special weather and night
 			name = 'ObstacleTrack-test',
-			dir_root = DIR_DATASETS / 'dataset_ObstacleTrack',
-			img_fmt = 'webp',
-			classes = dict(
-				road = 0,
-				obstacle = 1,
-				ignore = 255,
-
-				usual = 0,
-				anomaly = 1,
-			),
+			scenes = SCENES_ALL.difference({'snowstorm1', 'snowstorm2', 'driveway'}),
+			**DEFAULTS,
 		),
 		dict(
-			name = 'RoadObstacleTrack-test',
-			dir_root = DIR_DATASETS / 'dataset_RoadObstacleTrack',
-			img_fmt = 'webp',
-			classes = dict(
-				road = 0,
-				obstacle = 1,
-				ignore = 255,
-
-				usual = 0,
-				anomaly = 1,
-			),
-		),	
+			# all
+			name = 'ObstacleTrack-all',
+			scenes = SCENES_ALL,
+			**DEFAULTS,
+		),
+		dict(
+			# exclude night
+			name = 'ObstacleTrack-noNight',
+			scenes = SCENES_ALL.difference({'driveway'}),
+			**DEFAULTS,
+		),
+		dict(
+			# night
+			name = 'ObstacleTrack-night',
+			scenes = {'driveway'},
+			**DEFAULTS,
+		),
+		dict(
+			# night
+			name = 'ObstacleTrack-snowstorm',
+			scenes = {'snowstorm1', 'snowstorm2'},
+			**DEFAULTS,
+		),
 	]
 
 	channels = {
@@ -127,6 +154,23 @@ class DatasetObstacleTrack(DatasetRA):
 		'semantic_class_gt': ChannelLoaderImage("{dset.cfg.dir_root}/labels_masks/{fid}_labels_semantic.png"),
 	}
 
+	def set_frames(self, frame_list):
+		""" Filter frames by requested scenes """
+		frames_filtered = [
+			fr for fr in frame_list
+			if fr.fid.split('_')[0] in self.cfg.scenes
+		]
+
+		super().set_frames(frames_filtered)
+
+	def get_frame(self, key, *channels):
+		fr = super().get_frame(key, *channels)
+		
+		# Save outputs for all splits in the same directory
+		if self.cfg.name.startswith('ObstacleTrack'):
+			fr.dset_name = 'ObstacleTrack-test'
+
+		return fr
 
 @DatasetRegistry.register_class()
 class DatasetWeather(DatasetRA):

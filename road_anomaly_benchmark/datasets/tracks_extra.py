@@ -239,25 +239,31 @@ class LostAndFoundAnomaly(DatasetBase):
 
 
 @DatasetRegistry.register_class()
-class ROSubset(DatasetBase):
+class ErasingSubset(DatasetBase):
 	configs = [
 		dict(
-			name = 'RO-20',
-			split = 'RO20',
+			# from article "Detecting Road Obstacles By Erasing Them" 2020 version
+			name = 'Erasing-20',
+			split = 'Erasing20',
+			expected_length = 105,
 		),
 		dict(
-			name = 'RO-20nodog',
-			split = 'RO20-no-dog',
+			# from article "Detecting Road Obstacles By Erasing Them" 2020 version, without the dog
+			name = 'Erasing-20nodog',
+			split = 'Erasing20-no-dog',
+			expected_length = 100,
 		),
 
 		dict(
-			name = 'RO-21',
-			split = 'RO21',
+			# from article "Detecting Road Obstacles By Erasing Them", new snowstorm sequence
+			name = 'Erasing-21',
+			split = 'Erasing21',
+			expected_length = 155,
 		),
 	]
 
 	FRAME_IDS = {
-		'RO20-no-dog': [
+		'Erasing20-no-dog': [
 			"darkasphalt_axestump_2",
 			"darkasphalt_axestump_3",
 			"darkasphalt_bag_3",
@@ -359,14 +365,14 @@ class ROSubset(DatasetBase):
 			"paving_wood_2",
 			"paving_wood_3",
 		],
-		'RO20-dog': [
+		'Erasing20-dog': [
 			"darkasphalt2_dog_1",
 			"darkasphalt2_dog_2",
 			"darkasphalt2_dog_3",
 			"darkasphalt2_dog_4",
 			"darkasphalt2_dog_5",
 		],
-		'RO21-snowstorm': [
+		'Erasing21-snowstorm': [
 			'snowstorm1_00_16_02.578',
 			'snowstorm1_00_14_05.595',
 			'snowstorm1_00_14_37.727',
@@ -425,8 +431,8 @@ class ROSubset(DatasetBase):
 		],
 	}
 
-	FRAME_IDS['RO20'] = FRAME_IDS['RO20-no-dog'] + FRAME_IDS['RO20-dog']
-	FRAME_IDS['RO21'] = FRAME_IDS['RO20'] + FRAME_IDS['RO21-snowstorm']
+	FRAME_IDS['Erasing20'] = FRAME_IDS['Erasing20-no-dog'] + FRAME_IDS['Erasing20-dog']
+	FRAME_IDS['Erasing21'] = FRAME_IDS['Erasing20'] + FRAME_IDS['Erasing21-snowstorm']
 
 	for fidlist in FRAME_IDS.values():
 		fidlist.sort()
@@ -448,7 +454,7 @@ class ROSubset(DatasetBase):
 		return self.FRAME_IDS[self.cfg.split]
 
 	def discover(self):
-		self.base_ds = DatasetRegistry.get('ObstacleTrack-test')
+		self.base_ds = DatasetRegistry.get('ObstacleTrack-all')
 
 	def get_frame(self, idx_or_fid, *channels):
 		if isinstance(idx_or_fid, str): # by fid
