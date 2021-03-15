@@ -1,7 +1,8 @@
 
 
-from .dataset_io import DatasetBase, imread
+from .dataset_io import DatasetBase, ChannelLoaderImage, imread
 from .dataset_registry import DatasetRegistry
+from ..paths import DIR_DATASETS
 
 from pathlib import Path
 import json, os
@@ -24,20 +25,39 @@ def read_json(path, key=None, allow_failure=False):
 
 @DatasetRegistry.register_class()
 class FishyscapesLAFSubset(DatasetBase):
+	DIR_FISHY_LAF = Path(os.environ.get('DIR_FISHY_LAF', DIR_DATASETS / 'dataset_FishyLAF'))
+
 	configs = [
 		dict(
-			name = 'FishyLAF-val',
-			split = 'val',
+			# Fishyscapes subset of LAF dataset, but using original LAF obstacle labels
+			name = 'FishyLAFObstacle-val',
+			split = 'Obstacle-val',
+			expected_length = 98, # 2 frames are removed because their LAF labels are invalid
 		),
 		dict(
-			name = 'FishyLAF-test',
-			split = 'test',
+			# Fishyscapes re-labeling
+			name = 'FishyLAFAnomaly-val',
+			split = 'Anomaly-val',
+			expected_length = 100,
+			dir_fishy = DIR_FISHY_LAF,
+			dir_split = 'val',
+		),
+		dict(
+			# Fishyscapes subset of LAF dataset, but using original LAF obstacle labels
+			name = 'FishyLAFObstacle-test',
+			split = 'Obstacle-test',
+			expected_length = 268, # original 275 minus 7 invalid labels in LAF
 		),
 	]
 
-	FRAME_IDS = {
-		'val': [
-			"01_Hanns_Klemm_Str_45_000000_000080",
+	LAF_TEST_FIDS = read_json(
+		os.environ.get('FISHY_LAF_ID_FILE', Path('~/FishyLAF-ids.json').expanduser()), 
+		allow_failure=True,
+	)
+
+	FRAME_IDS_SETS = {
+		'Anomaly-val': {
+			"01_Hanns_Klemm_Str_45_000000_000080", 
 			"01_Hanns_Klemm_Str_45_000000_000140",
 			"01_Hanns_Klemm_Str_45_000000_000200",
 			"01_Hanns_Klemm_Str_45_000000_000230",
@@ -46,7 +66,7 @@ class FishyscapesLAFSubset(DatasetBase):
 			"01_Hanns_Klemm_Str_45_000001_000120",
 			"01_Hanns_Klemm_Str_45_000001_000180",
 			"01_Hanns_Klemm_Str_45_000001_000210",
-			#"01_Hanns_Klemm_Str_45_000001_000240", # the LAF labels are invalid
+			"01_Hanns_Klemm_Str_45_000001_000240", # the LAF labels are invalid
 			"01_Hanns_Klemm_Str_45_000002_000070",
 			"01_Hanns_Klemm_Str_45_000002_000130",
 			"01_Hanns_Klemm_Str_45_000002_000190",
@@ -62,7 +82,7 @@ class FishyscapesLAFSubset(DatasetBase):
 			"01_Hanns_Klemm_Str_45_000005_000080",
 			"01_Hanns_Klemm_Str_45_000005_000140",
 			"01_Hanns_Klemm_Str_45_000005_000200",
-			#"01_Hanns_Klemm_Str_45_000005_000230", # the LAF labels are invalid
+			"01_Hanns_Klemm_Str_45_000005_000230", # the LAF labels are invalid
 			"01_Hanns_Klemm_Str_45_000008_000060",
 			"01_Hanns_Klemm_Str_45_000008_000120",
 			"01_Hanns_Klemm_Str_45_000008_000180",
@@ -137,23 +157,30 @@ class FishyscapesLAFSubset(DatasetBase):
 			"13_Elly_Beinhorn_Str_000003_000140",
 			"13_Elly_Beinhorn_Str_000003_000200",
 			"13_Elly_Beinhorn_Str_000003_000260",
-		],
-		'test': read_json(
-			os.environ.get('FISHY_LAF_ID_FILE', Path('~/FishyLAF-ids.json').expanduser()), 
-			'test', 
-			allow_failure=True,
-		),
+		},
+		'Anomaly-test': set(LAF_TEST_FIDS['test'] if LAF_TEST_FIDS else []),
 	}
 
-	for fidlist in FRAME_IDS.values():
-		fidlist.sort()
+	# remove frames with invalid LAF labels
+	FRAME_IDS_SETS['Obstacle-val'] = FRAME_IDS_SETS['Anomaly-val'].difference({
+		"01_Hanns_Klemm_Str_45_000001_000240",
+		"01_Hanns_Klemm_Str_45_000005_000230",
+	})
 
-	FRAME_IDS_SETS = {
-		# split: {
-		# 	fid: i for i, fid in enumerate(fids)
-		# }	
-		split: set(fids)
-		for split, fids in FRAME_IDS.items()
+	if FRAME_IDS_SETS['Anomaly-test']:
+		FRAME_IDS_SETS['Obstacle-test'] = FRAME_IDS_SETS['Anomaly-test'].difference(
+			LAF_TEST_FIDS['testInvalid']
+		)
+
+	FRAME_IDS = {
+		split: list(sorted(fidset))
+		for split, fidset in FRAME_IDS_SETS.items()
+	}
+
+	channels_extra = {
+		'semantic_class_gt': ChannelLoaderImage(
+			'{dset.cfg.dir_fishy}/labels/{dset.cfg.dir_split}/{fid}_fishy-labels.png',
+		),
 	}
 
 	def __init__(self, cfg):
@@ -163,6 +190,10 @@ class FishyscapesLAFSubset(DatasetBase):
 	@property
 	def fids(self):
 		return self.FRAME_IDS[self.cfg.split]
+
+	@property
+	def b_load_labels(self):
+		return self.cfg.get('dir_fishy') is not None
 
 	def discover(self):
 		self.laf_dsets = {
@@ -184,7 +215,16 @@ class FishyscapesLAFSubset(DatasetBase):
 		else:
 			base_ds = self.laf_dsets['test']
 
+		key_labels = 'semantic_class_gt'
+		if self.b_load_labels:
+			channels = set(channels).difference({key_labels, 'semantic_class_gt'})
+
 		fr = base_ds.get_frame(fid, *channels)
+
+		if self.b_load_labels:
+			label = self.channels_extra[key_labels].read(dset=self, **fr)
+			fr[key_labels] = label
+			fr['label_pixel_gt'] = label
 
 		return fr
 
