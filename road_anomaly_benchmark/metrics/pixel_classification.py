@@ -286,7 +286,7 @@ class MetricPixelClassification(EvaluationMetric):
 			raise FileNotFoundError(f'No saved curve at {out_path} or {out_path_simplified}')
 
 	def fields_for_table(self):
-		return ['area_PRC', 'tpr95_fpr']
+		return ['area_PRC', 'tpr95_fpr', 'best_f1']
 
 	def plot_many(self, aggregated_results : List, comparison_name : str, close : bool = True):
 
