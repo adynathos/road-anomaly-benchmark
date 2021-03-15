@@ -216,28 +216,61 @@ class DatasetLostAndFound(DatasetRA):
 		anomaly = [2, 200], # range
 	)
 
+	DEFAULTS = dict(
+		dir_root = DIR_LAF,
+		classes = LAF_CLASSES,
+	)
+
 	configs = [
 		dict(
 			name = 'LostAndFound-train',
 			split = 'train',
-			dir_root = DIR_LAF,
-			
-			# invalid frames are those where np.count_nonzero(labels_source) is 0
-			invalid_labeled_frames = [44,  67,  88, 109, 131, 614],
-			expected_length = 1030,
-
-			classes = LAF_CLASSES,
+			expected_length = 1036,
+			**DEFAULTS,
 		),
 		dict(
 			name = 'LostAndFound-test',
-			split = 'test',
-			dir_root = DIR_LAF,
+			split = 'test',		
+			expected_length = 1203,
+			**DEFAULTS,
+		),
+		dict(
+			name = 'LostAndFound-trainValid',
+			split = 'train',
 			
 			# invalid frames are those where np.count_nonzero(labels_source) is 0
-			invalid_labeled_frames = [17,  37,  55,  72,  91, 110, 129, 153, 174, 197, 218, 353, 490, 618, 686, 792, 793],
+			exclude_frame_indices = [44,  67,  88, 109, 131, 614],
+			expected_length = 1030,
+
+			**DEFAULTS,
+		),
+		dict(
+			name = 'LostAndFound-testValid',
+			split = 'test',
+			
+			# invalid frames are those where np.count_nonzero(labels_source) is 0
+			exclude_frame_indices = [17,  37,  55,  72,  91, 110, 129, 153, 174, 197, 218, 353, 490, 618, 686, 792, 793],
 			expected_length = 1186,
 
-			classes = LAF_CLASSES,
+			**DEFAULTS,
+		),
+
+		dict(
+			# valid test set, excluding known objects - pedestrians and bicycles
+			name = 'LostAndFound-testNoKnown',
+			split = 'test',
+			
+			# invalid frames are those where np.count_nonzero(labels_source) is 0
+			exclude_frame_indices = [17,  37,  55,  72,  91, 110, 129, 153, 174, 197, 218, 353, 490, 618, 686, 792, 793],
+			exclude_prefix = {
+				'15_Rechbergstr_Deckenpfronn',  # children
+    			'01_Hanns_Klemm_Str_45_000006',  # velo
+    			'01_Hanns_Klemm_Str_45_000007',  # velo
+    			'10_Schlossberg_9_000004',  # velo
+			},
+			expected_length = 1043,
+
+			**DEFAULTS,
 		),
 	]
 
@@ -299,11 +332,23 @@ class DatasetLostAndFound(DatasetRA):
 		]
 		frames.sort(key = itemgetter('fid'))
 		
-		# remove invalid labeled frames
-		invalid_indices = self.cfg.invalid_labeled_frames
-		valid_indices = np.delete(np.arange(frames.__len__()), invalid_indices)
-		#print('\n '.join([frames[i].fid for i in invalid_indices]))
-		frames = [frames[i] for i in valid_indices]
+		# remove invalid labeled frames	
+		invalid_indices = self.cfg.get('exclude_frame_indices')
+		if invalid_indices is not None:
+			valid_indices = np.delete(np.arange(frames.__len__()), invalid_indices)
+			frames = [frames[i] for i in valid_indices]
+
+		# remove scenes
+		excluded_prefixes = self.cfg.get('exclude_prefix')
+		if excluded_prefixes is not None:
+			frlen = frames.__len__()
+			frames = [
+				fr for fr in frames 
+				if not any([
+					fr.fid.startswith(p) for p in excluded_prefixes
+				])
+			]
+			print(f'Exclude {frlen} -> {frames.__len__()}')
 
 		self.set_frames(frames)
 		self.check_size()
