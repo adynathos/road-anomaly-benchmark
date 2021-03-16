@@ -199,8 +199,6 @@ class MetricPixelClassification(EvaluationMetric):
 
 		# each frame has the same thresholds, so we can sum the cmats
 		cmat_sum = np.sum([result.cmat_sum for result in frame_results], axis=0)
-		print(frame_results[0].cmat_sum.shape)
-		print(cmat_sum.shape)
 
 		return EasyDict(
 			cmat = cmat_sum,
@@ -250,7 +248,6 @@ class MetricPixelClassification(EvaluationMetric):
 		thresholds = ag.thresholds
 		cmats = ag.cmat
 
-		print(cmats.shape)
 		curves = curves_from_cmats(cmats, thresholds)
 
 		bc_info = BinaryClassificationCurve(

@@ -77,14 +77,10 @@ def curves_from_cmats(cmats, thresholds):
 		cmats = cmats[num_remove:]
 		thresholds = thresholds[num_remove:]
 
-	print(cmats.shape)
-
 	tp = cmats[:, 0, 0]
 	fp = cmats[:, 0, 1]
 	fn = cmats[:, 1, 0]
 	tn = cmats[:, 1, 1]
-
-	print(tp, fp)
 
 	tp_rates = tp / (tp+fn)
 	fp_rates = fp / (fp+tn)
