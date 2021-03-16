@@ -77,14 +77,10 @@ def curves_from_cmats(cmats, thresholds):
 		cmats = cmats[num_remove:]
 		thresholds = thresholds[num_remove:]
 
-	print(cmats.shape)
-
 	tp = cmats[:, 0, 0]
 	fp = cmats[:, 0, 1]
 	fn = cmats[:, 1, 0]
 	tn = cmats[:, 1, 1]
-
-	print(tp, fp)
 
 	tp_rates = tp / (tp+fn)
 	fp_rates = fp / (fp+tn)
@@ -105,7 +101,7 @@ def curves_from_cmats(cmats, thresholds):
 	recall50_index = np.searchsorted(recalls, 0.50)
 	recall50_threshold = float(thresholds[recall50_index])
 
-	ix = np.argmax(f1_scores)
+	ix = np.nanargmax(f1_scores)
 	best_f1_threshold = float(thresholds[ix])
 	best_f1 = f1_scores[ix]
 

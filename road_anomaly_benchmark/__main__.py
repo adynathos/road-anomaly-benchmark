@@ -84,7 +84,7 @@ def comparison(comparison_name, method_names, metric_names, dataset_names, order
 				for method in method_names
 			]
 			# TODO provide method name map
-			metric.plot_many(ags, comparison_name)
+			metric.plot_many(ags, f'{comparison_name}_{dset}')
 
 			for ag, method in zip(ags, method_names):
 				for f, v in metric.extracts_fields_for_table(ag).items():

@@ -40,11 +40,13 @@ class DatasetRA(DatasetBase):
 		if desired_len is not None and actual_len != desired_len:
 			raise ValueError(f'The dataset should have {desired_len} frames but found {actual_len}')
 
-	def __getitem__(self, key):
-		"""
+	def get_frame(self, key, *channels):
 
-		"""
-		fr = super().__getitem__(key)
+		channels = set(channels)
+		if 'label_pixel_gt' in channels:
+			channels.remove('label_pixel_gt')
+
+		fr = super().get_frame(key, *channels)
 
 		sem_gt = fr.get('semantic_class_gt')
 		if sem_gt is not None:
@@ -79,6 +81,7 @@ class DatasetAnomalyTrack(DatasetRA):
 				anomaly = 1,
 				ignore = 255,
 			),
+			expected_length = 100,
 		),
 	]
 
@@ -91,32 +94,65 @@ class DatasetAnomalyTrack(DatasetRA):
 @DatasetRegistry.register_class()
 class DatasetObstacleTrack(DatasetRA):
 
+	CLASS_IDS = dict(
+		road = 0,
+		obstacle = 1,
+		ignore = 255,
+
+		usual = 0,
+		anomaly = 1,
+	)
+
+	DEFAULTS = dict(
+		dir_root = DIR_DATASETS / 'dataset_ObstacleTrack',
+		img_fmt = 'webp',
+		classes = CLASS_IDS,
+		name_for_persistence = 'ObstacleTrack-test',
+	)
+
+	SCENES_ALL = {
+		'curvy-street', 'one-way-street', # obstacle track
+		'gravel', 'greyasphalt', 'motorway', 'paving', 'darkasphalt', # RO 2020
+		'darkasphalt2', # RO 2020 dog
+		'snowstorm1', 'snowstorm2', # RO 2021
+		'driveway', # night
+	}
+
 	configs = [
 		dict(
+			# default: exclude special weather and night
 			name = 'ObstacleTrack-test',
-			dir_root = DIR_DATASETS / 'dataset_ObstacleTrack',
-			img_fmt = 'webp',
-			classes = dict(
-				road = 0,
-				obstacle = 1,
-				ignore = 255,
-
-				usual = 0,
-				anomaly = 1,
-			),
+			scenes = SCENES_ALL.difference({'snowstorm1', 'snowstorm2', 'driveway'}),
+			expected_length = 327,
+			**DEFAULTS,
 		),
 		dict(
-			name = 'RoadObstacleTrack-test',
-			dir_root = DIR_DATASETS / 'dataset_RoadObstacleTrack',
-			img_fmt = 'webp',
-			classes = dict(
-				road = 0,
-				obstacle = 1,
-				ignore = 255,
-
-				usual = 0,
-				anomaly = 1,
-			),
+			# all
+			name = 'ObstacleTrack-all',
+			scenes = SCENES_ALL,
+			expected_length = 412,
+			**DEFAULTS,
+		),
+		dict(
+			# exclude night
+			name = 'ObstacleTrack-noNight',
+			scenes = SCENES_ALL.difference({'driveway'}),
+			expected_length = 382,
+			**DEFAULTS,
+		),
+		dict(
+			# night
+			name = 'ObstacleTrack-night',
+			scenes = {'driveway'},
+			expected_length = 30,
+			**DEFAULTS,
+		),
+		dict(
+			# night
+			name = 'ObstacleTrack-snowstorm',
+			scenes = {'snowstorm1', 'snowstorm2'},
+			expected_length = 55,
+			**DEFAULTS,
 		),
 	]
 
@@ -124,6 +160,15 @@ class DatasetObstacleTrack(DatasetRA):
 		'image': ChannelLoaderImage("{dset.cfg.dir_root}/images/{fid}.{dset.cfg.img_fmt}"),
 		'semantic_class_gt': ChannelLoaderImage("{dset.cfg.dir_root}/labels_masks/{fid}_labels_semantic.png"),
 	}
+
+	def set_frames(self, frame_list):
+		""" Filter frames by requested scenes """
+		frames_filtered = [
+			fr for fr in frame_list
+			if fr.fid.split('_')[0] in self.cfg.scenes
+		]
+
+		super().set_frames(frames_filtered)
 
 
 @DatasetRegistry.register_class()
@@ -164,28 +209,64 @@ class DatasetLostAndFound(DatasetRA):
 		anomaly = [2, 200], # range
 	)
 
+	DEFAULTS = dict(
+		dir_root = DIR_LAF,
+		classes = LAF_CLASSES,
+	)
+
 	configs = [
 		dict(
 			name = 'LostAndFound-train',
 			split = 'train',
-			dir_root = DIR_LAF,
-
-			# invalid frames are those where np.count_nonzero(labels_source) is 0
-			invalid_labeled_frames = [44,  67,  88, 109, 131, 614],
-			expected_length = 1030,
-
-			classes = LAF_CLASSES,
+			expected_length = 1036,
+			**DEFAULTS,
 		),
 		dict(
 			name = 'LostAndFound-test',
 			split = 'test',
-			dir_root = DIR_LAF,
+			expected_length = 1203,
+			**DEFAULTS,
+		),
+		dict(
+			name = 'LostAndFound-trainValid',
+			split = 'train',
+			name_for_persistence = 'LostAndFound-train',
 
 			# invalid frames are those where np.count_nonzero(labels_source) is 0
-			invalid_labeled_frames = [17,  37,  55,  72,  91, 110, 129, 153, 174, 197, 218, 353, 490, 618, 686, 792, 793],
+			exclude_frame_indices = [44,  67,  88, 109, 131, 614],
+			expected_length = 1030,
+
+			**DEFAULTS,
+		),
+		dict(
+			name = 'LostAndFound-testValid',
+			name_for_persistence = 'LostAndFound-test',
+			split = 'test',
+
+			# invalid frames are those where np.count_nonzero(labels_source) is 0
+			exclude_frame_indices = [17,  37,  55,  72,  91, 110, 129, 153, 174, 197, 218, 353, 490, 618, 686, 792, 793],
 			expected_length = 1186,
 
-			classes = LAF_CLASSES,
+			**DEFAULTS,
+		),
+
+		dict(
+			# valid test set, excluding known objects - pedestrians and bicycles
+			name = 'LostAndFound-testNoKnown',
+			name_for_persistence = 'LostAndFound-test',
+			split = 'test',
+
+			# invalid frames are those where np.count_nonzero(labels_source) is 0
+			exclude_frame_indices = [17,  37,  55,  72,  91, 110, 129, 153, 174, 197, 218, 353, 490, 618, 686, 792, 793],
+			exclude_prefix = {
+				'15_Rechbergstr_Deckenpfronn',  # children
+    			'01_Hanns_Klemm_Str_45_000006',  # velo
+    			'01_Hanns_Klemm_Str_45_000007',  # velo
+    			'10_Schlossberg_9_000004',  # velo
+			},
+			expected_length = 1043,
+
+			**DEFAULTS,
 		),
 	]
 
@@ -196,6 +277,9 @@ class DatasetLostAndFound(DatasetRA):
 		'semantic_class_gt': ChannelLoaderImage(
 			'{dset.cfg.dir_root}/gtCoarse/{dset.cfg.split}/{scene_id:02d}_{scene_name}/{fid}_gtCoarse_labelIds.png',
 		),
+		# 'semantic_class_gt_tid': ChannelLoaderImage(
+		# 	'{dset.cfg.dir_root}/gtCoarse/{dset.cfg.split}/{scene_id:02d}_{scene_name}/{fid}_gtCoarse_labelTrainIds.png',
+		# ),
 		'instances': ChannelLoaderImage(
 			'{dset.cfg.dir_root}/gtCoarse/{dset.cfg.split}/{scene_id:02d}_{scene_name}/{fid}_gtCoarse_instanceIds.png',
 		),
@@ -245,10 +329,22 @@ class DatasetLostAndFound(DatasetRA):
 		frames.sort(key = itemgetter('fid'))
 
 		# remove invalid labeled frames
-		invalid_indices = self.cfg.invalid_labeled_frames
-		valid_indices = np.delete(np.arange(frames.__len__()), invalid_indices)
-		#print('\n '.join([frames[i].fid for i in invalid_indices]))
-		frames = [frames[i] for i in valid_indices]
+		invalid_indices = self.cfg.get('exclude_frame_indices')
+		if invalid_indices is not None:
+			valid_indices = np.delete(np.arange(frames.__len__()), invalid_indices)
+			frames = [frames[i] for i in valid_indices]
+
+		# remove scenes
+		excluded_prefixes = self.cfg.get('exclude_prefix')
+		if excluded_prefixes is not None:
+			frlen = frames.__len__()
+			frames = [
+				fr for fr in frames
+				if not any([
+					fr.fid.startswith(p) for p in excluded_prefixes
+				])
+			]
+			print(f'Exclude {frlen} -> {frames.__len__()}')
 
 		self.set_frames(frames)
 		self.check_size()
