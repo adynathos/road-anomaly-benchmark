@@ -107,6 +107,7 @@ class DatasetObstacleTrack(DatasetRA):
 		dir_root = DIR_DATASETS / 'dataset_ObstacleTrack',
 		img_fmt = 'webp',
 		classes = CLASS_IDS,
+		name_for_persistence = 'ObstacleTrack-test',
 	)
 
 	SCENES_ALL = {
@@ -169,14 +170,6 @@ class DatasetObstacleTrack(DatasetRA):
 
 		super().set_frames(frames_filtered)
 
-	def get_frame(self, key, *channels):
-		fr = super().get_frame(key, *channels)
-		
-		# Save outputs for all splits in the same directory
-		if self.cfg.name.startswith('ObstacleTrack'):
-			fr.dset_name = 'ObstacleTrack-test'
-
-		return fr
 
 @DatasetRegistry.register_class()
 class DatasetWeather(DatasetRA):
