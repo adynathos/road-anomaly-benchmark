@@ -40,6 +40,8 @@ def default_instancer(anomaly_p: np.ndarray, label_pixel_gt: np.ndarray, thresh_
             if len(anomaly_seg_pred[labeled_mask == comp]) < minimum_cc_sum:
                 anomaly_seg_pred[labeled_mask == comp] = 0
     labeled_mask = np.copy(anomaly_instances)
+
+    label_pixel_gt = label_pixel_gt.copy() # copy for editing
     for comp in range(n_anomaly + 1):
         if len(anomaly_instances[labeled_mask == comp]) < thresh_instsize:
             label_pixel_gt[labeled_mask == comp] = 255

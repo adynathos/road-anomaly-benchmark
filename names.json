@@ -1,0 +1,19 @@
+{
+	"metrics": {
+		"PixBinaryClass.area_PRC": "AP",
+		"PixBinaryClass.tpr95_fpr": "TPR95 FPR",
+		"PixBinaryClass.best_f1": "best F1"
+	},
+	"datasets": {
+		"ObstacleTrack-test": "Obstacle Track",
+		"LostAndFound-testNoKnown": "LAF-testNK",
+		"RoadAnomalyTrack-test": "Anomaly Track",
+		"FishyLAFAnomaly-val": "FishyLAF-val"
+
+	},
+	"methods": {
+		"ImgBlur05VsInp-ds2-NoiseImg": "Inpainting Discrepancy",
+		"Resynth2048Orig": "Resynthesis",
+		"Island": "Segmenter Island"		
+	}
+} 
