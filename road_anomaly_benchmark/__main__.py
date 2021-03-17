@@ -1,6 +1,8 @@
 
 import logging
 log = logging.getLogger('road_anomaly_benchmark.__main__')
+import json
+from pathlib import Path
 
 import click
 import numpy as np
@@ -58,13 +60,26 @@ def metric(method_names, metric_names, dataset_names, limit_length, parallel, fr
 @click.argument('method_names', type=str)
 @click.argument('dataset_names', type=str)
 @click.option('--order-by', type=str, default=None)
-def comparison(comparison_name, method_names, metric_names, dataset_names, order_by=None):
+@click.option('--names', type=click.Path(exists=True, file_okay=True, dir_okay=False))
+def comparison(comparison_name, method_names, metric_names, dataset_names, order_by=None, names=None):
 
 	method_names = name_list(method_names)
 	metric_names = name_list(metric_names)
 	dataset_names = name_list(dataset_names)
 
 	order_by = order_by or f'{dataset_names[0]}.{metric_names[0]}.area_PRC'
+
+	if names is not None:
+		rename_map = json.loads(Path(names).read_text())
+		rename_methods = rename_map.get('methods', {})
+		rename_dsets = rename_map.get('datasets', {})
+		rename_metrics = rename_map.get('metrics', {})
+
+		order_by = rename_metrics.get(order_by, order_by)
+
+	else:
+		rename_methods = rename_dsets = rename_metrics = {}
+
 
 	columns = {}
 
@@ -88,7 +103,16 @@ def comparison(comparison_name, method_names, metric_names, dataset_names, order
 
 			for ag, method in zip(ags, method_names):
 				for f, v in metric.extracts_fields_for_table(ag).items():
-					get_col(f'{dset}.{metric_name}.{f}')[method] = v
+
+					ds = rename_dsets.get(dset, dset)
+					met = f'{metric_name}.{f}'
+					met = rename_metrics.get(met, met)
+					
+					# colname = f'{dset}.{metric_name}.{f}'
+					colname = f'{ds}.{met}'
+					mn = rename_methods.get(method, method)
+
+					get_col(colname)[mn] = v
 
 	table = DataFrame(data = columns)
 

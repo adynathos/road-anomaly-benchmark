@@ -288,7 +288,7 @@ class MetricPixelClassification(EvaluationMetric):
 	def plot_many(self, aggregated_results : List, comparison_name : str, close : bool = True):
 
 		cinfos = [
-			reduce_curve_resolution(cinfo, num_pts=128)
+			reduce_curve_resolution(cinfo, num_pts=256)
 			for cinfo in aggregated_results
 		]
 
