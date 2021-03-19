@@ -1,6 +1,7 @@
 
 
 from .dataset_io import DatasetBase, ChannelLoaderImage, imread
+from .tracks import DatasetRA
 from .dataset_registry import DatasetRegistry
 from ..paths import DIR_DATASETS
 
@@ -51,13 +52,13 @@ class FishyscapesLAFSubset(DatasetBase):
 	]
 
 	LAF_TEST_FIDS = read_json(
-		os.environ.get('FISHY_LAF_ID_FILE', Path('~/FishyLAF-ids.json').expanduser()), 
+		os.environ.get('FISHY_LAF_ID_FILE', Path('~/FishyLAF-ids.json').expanduser()),
 		allow_failure=True,
 	)
 
 	FRAME_IDS_SETS = {
 		'Anomaly-val': {
-			"01_Hanns_Klemm_Str_45_000000_000080", 
+			"01_Hanns_Klemm_Str_45_000000_000080",
 			"01_Hanns_Klemm_Str_45_000000_000140",
 			"01_Hanns_Klemm_Str_45_000000_000200",
 			"01_Hanns_Klemm_Str_45_000000_000230",
@@ -186,7 +187,7 @@ class FishyscapesLAFSubset(DatasetBase):
 	def __init__(self, cfg):
 		super().__init__(cfg)
 		self.discover()
-		
+
 	@property
 	def fids(self):
 		return self.FRAME_IDS[self.cfg.split]
@@ -235,7 +236,7 @@ class FishyscapesLAFSubset(DatasetBase):
 @DatasetRegistry.register_class()
 class LostAndFoundAnomaly(DatasetBase):
 	"""
-	LAF obstacles, but the ROI is the whole image 
+	LAF obstacles, but the ROI is the whole image
 	(except ego vehicle and sensor artifacts)
 	not just the drivable space.
 	"""
@@ -255,7 +256,7 @@ class LostAndFoundAnomaly(DatasetBase):
 	def __init__(self, cfg):
 		super().__init__(cfg)
 		self.discover()
-		
+
 	def discover(self):
 		self.base_ds = DatasetRegistry.get(self.cfg.base_ds)
 		self.roi_mask = imread(self.cfg.roi_img).astype(bool)
@@ -480,7 +481,7 @@ class ErasingSubset(DatasetBase):
 	FRAME_IDS_SETS = {
 		# split: {
 		# 	fid: i for i, fid in enumerate(fids)
-		# }	
+		# }
 		split: set(fids)
 		for split, fids in FRAME_IDS.items()
 	}
@@ -488,13 +489,196 @@ class ErasingSubset(DatasetBase):
 	def __init__(self, cfg):
 		super().__init__(cfg)
 		self.discover()
-		
+
 	@property
 	def fids(self):
 		return self.FRAME_IDS[self.cfg.split]
 
 	def discover(self):
 		self.base_ds = DatasetRegistry.get('ObstacleTrack-all')
+
+	def get_frame(self, idx_or_fid, *channels):
+		if isinstance(idx_or_fid, str): # by fid
+			if idx_or_fid not in FRAME_IDS_SETS:
+				raise KeyError('Id {idx_or_fid} is not in this dataset')
+			else:
+				fid = idx_or_fid
+		else:
+			fid = self.FRAME_IDS[self.cfg.split][idx_or_fid]
+
+		fr = self.base_ds.get_frame(fid, *channels)
+		return fr
+
+	def __len__(self):
+		return self.fids.__len__()
+
+@DatasetRegistry.register_class()
+class RoadAnomalyByClass(DatasetRA):
+	configs = [
+		dict(
+			name = 'AnomalyTrack-animals',
+			img_fmt = 'jpg',
+			split = 'animals',
+			dir_root = DIR_DATASETS / 'dataset_AnomalyTrack',
+			expected_length = 59,
+			classes = dict(
+				usual = 0,
+				anomaly = 1,
+				ignore = 255,
+			),
+		),
+		dict(
+			name = 'AnomalyTrack-vehicles',
+			img_fmt = 'jpg',
+			split = 'vehicles',
+			dir_root = DIR_DATASETS / 'dataset_AnomalyTrack',
+			expected_length = 22,
+			classes = dict(
+				usual = 0,
+				anomaly = 1,
+				ignore = 255,
+			),
+		),
+		dict(
+			name = 'AnomalyTrack-other',
+			img_fmt = 'jpg',
+			split = 'other',
+			dir_root = DIR_DATASETS / 'dataset_AnomalyTrack',
+			expected_length = 13,
+			classes = dict(
+				usual = 0,
+				anomaly = 1,
+				ignore = 255,
+			),
+		),
+	]
+
+	channels = {
+		'image': ChannelLoaderImage("{dset.cfg.dir_root}/images/{fid}.{dset.cfg.img_fmt}"),
+		'semantic_class_gt': ChannelLoaderImage("{dset.cfg.dir_root}/labels_masks/{fid}_labels_semantic.png"),
+	}
+
+	FRAME_IDS = {
+		'animals': [
+			'zebra0000',
+			'zebra0001',
+			'sheep0000',
+			'sheep0001',
+			'sheep0002',
+			'sheep0003',
+			'sheep0004',
+			'sheep0005',
+			'sheep0006',
+			'sheep0007',
+			'sheep0008',
+			'sheep0009',
+			'sheep0010',
+			'rhino0000',
+			'rhino0001',
+			'pig0000',
+			'pig0001',
+			'lion0000',
+			'leopard0000',
+			'horse0000',
+			'horse0001',
+			'horse0002',
+			'horse0003',
+			'horse0004',
+			'goose0000',
+			'elephant0000',
+			'elephant0001',
+			'elephant0002',
+			'elephant0003',
+			'elephant0004',
+			'elephant0005',
+			'elephant0006',
+			'elephant0007',
+			'elephant0008',
+			'elephant0009',
+			'elephant0010',
+			'elephant0011',
+			'donkey0000',
+			'donkey0001',
+			'deer0000',
+			'deer0001',
+			'cow0000',
+			'cow0001',
+			'cow0002',
+			'cow0003',
+			'cow0004',
+			'cow0005',
+			'cow0006',
+			'cow0007',
+			'cow0008',
+			'cow0009',
+			'cow0010',
+			'cow0011',
+			'cow0012',
+			'cow0013',
+			'cock0000',
+			'camel0000',
+			'camel0001',
+			'bear0000',
+		],
+		'vehicles': [
+			'airplane0000',
+			'airplane0001',
+			'boat_trailer0000',
+			'boat_trailer0001',
+			'boat_trailer0002',
+			'boat_trailer0003',
+			'boat_trailer0004',
+			'caravan0000',
+			'caravan0001',
+			'caravan0002',
+			'caravan0003',
+			'caravan0004',
+			'caravan0005',
+			'caravan0006',
+			'caravan0007',
+			'carriage0001',  # only carriage where horse is not visible
+			'tractor0000',
+			'tractor0001',
+			'tractor0002',
+			'tractor0003',
+			'tractor0004',
+			'tractor0005',
+		],
+		'other': [
+			'coffin0000',
+			'cones0000',
+			'cones0001',
+			'cones0002',
+			'cones0003',
+			'cones0004',
+			'cones0005',
+			'cones0006',
+			'hay0000',
+			'piano0000',
+			'tent0000',
+			'toy_car0000',
+		],
+	}
+
+	for fidlist in FRAME_IDS.values():
+		fidlist.sort()
+
+	FRAME_IDS_SETS = {
+		split: set(fids)
+		for split, fids in FRAME_IDS.items()
+	}
+
+	def __init__(self, cfg):
+		super().__init__(cfg)
+		self.discover()
+		super().check_size()
+
+	@property
+	def fids(self):
+		return self.FRAME_IDS[self.cfg.split]
+
+	def discover(self):
+		self.base_ds = DatasetRegistry.get('AnomalyTrack-test')
 
 	def get_frame(self, idx_or_fid, *channels):
 		if isinstance(idx_or_fid, str): # by fid
