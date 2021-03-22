@@ -544,7 +544,7 @@ class RoadAnomalyByClass(DatasetRA):
 			img_fmt = 'jpg',
 			split = 'other',
 			dir_root = DIR_DATASETS / 'dataset_AnomalyTrack',
-			expected_length = 13,
+			expected_length = 12,
 			classes = dict(
 				usual = 0,
 				anomaly = 1,
