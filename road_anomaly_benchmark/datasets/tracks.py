@@ -26,7 +26,7 @@ class DatasetRA(DatasetBase):
 			dset = self,
 			fid = '*',
 		))
-		print(path_template, path_template.parent, path_template.name)
+		# print(path_template, path_template.parent, path_template.name)
 		fids = [p.stem for p in path_template.parent.glob(path_template.name)]
 		fids.sort()
 		self.set_frames([EasyDict(fid=fid) for fid in fids])
@@ -118,6 +118,21 @@ class DatasetObstacleTrack(DatasetRA):
 		'driveway', # night
 	}
 
+	# splits for per-scene breakdown
+	SCENE_SPLITS = {
+		'curvy': ['curvy-street'],
+		'darkasphalt': ['darkasphalt'],
+		'darkasphaltDog': ['darkasphalt2'], # dog 
+		'darkasphaltAll': ['darkasphalt', 'darkasphalt2'],
+		'gravel': ['gravel'],
+		'greyasphalt': ['greyasphalt'],
+		'motorway': ['motorway'],
+		'shiny': ['one-way-street'], # sun reflects off wet road
+		'paving': ['paving'],
+		'night': ['driveway'],
+		'snowstorm': ['snowstorm1', 'snowstorm2'],
+	}
+
 	configs = [
 		dict(
 			# default: exclude special weather and night
@@ -155,6 +170,13 @@ class DatasetObstacleTrack(DatasetRA):
 			**DEFAULTS,
 		),
 	]
+
+	for splitname, scenes in SCENE_SPLITS.items():
+		configs.append(dict(
+			name = f'ObstacleScene-{splitname}',
+			scenes = set(scenes),
+			**DEFAULTS,
+		))
 
 	channels = {
 		'image': ChannelLoaderImage("{dset.cfg.dir_root}/images/{fid}.{dset.cfg.img_fmt}"),
