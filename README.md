@@ -77,16 +77,45 @@ python -m road_anomaly_benchmark comparison MyComparison metric1,metric2 method1
 
 ```bash
 # Anomaly tables
-python -m road_anomaly_benchmark comparison TableAnomaly1 PixBinaryClass,SegEval-AnomalyTrack $methods_ano RoadAnomalyTrack-test
-python -m road_anomaly_benchmark comparison TableAnomaly2 PixBinaryClass,SegEval-AnomalyTrack $methods_ano FishyLAFAnomaly-val
+python -m road_anomaly_benchmark comparison TableAnomaly1 PixBinaryClass,SegEval-AnomalyTrack $methods_ano RoadAnomalyTrack-test --names names.json
+python -m road_anomaly_benchmark comparison TableAnomaly2 PixBinaryClass,SegEval-AnomalyTrack $methods_ano FishyLAFAnomaly-val --names names.json
 ```
 
 * Obstacle splits: *ObstacleTrack-test, LostAndFound-testNoKnown*
 
 ```bash
 # Obstacle tables
-python -m road_anomaly_benchmark comparison TableObstacle1 PixBinaryClass,SegEval-ObstacleTrack $methods_obs ObstacleTrack-test
-python -m road_anomaly_benchmark comparison TableObstacle2 PixBinaryClass,SegEval-ObstacleTrack $methods_obs LostAndFound-testNoKnown
+python -m road_anomaly_benchmark comparison TableObstacle1 PixBinaryClass,SegEval-ObstacleTrack $methods_obs ObstacleTrack-test  --names names.json
+python -m road_anomaly_benchmark comparison TableObstacle2 PixBinaryClass,SegEval-ObstacleTrack $methods_obs LostAndFound-testNoKnown  --names names.json
+```
+
+## Splits
+
+### Obstacle scene splits
+
+Scene loaders:
+
+* ObstacleScene-curvy - cracked road, surrounded by snow
+* ObstacleScene-gravel - gravel road, no snow
+* ObstacleScene-greyasphalt - grey roads, in village and in forest
+* ObstacleScene-motorway - motorway with side railings
+* ObstacleScene-shiny - sun reflects off wet road
+* ObstacleScene-paving - road made of bricks
+* ObstacleScene-darkasphaltAll - asphalt after rain, with some autumn leaves, combines 2 locations (below)
+* ObstacleScene-darkasphalt - asphalt after rain, with some autumn leaves, dog sequence excluded
+* ObstacleScene-darkasphaltDog - asphalt after rain, with some autumn leaves, dog sequence only
+* ObstacleScene-night - evening or night illuminated with car lamps
+* ObstacleScene-snowstorm - snow falling, camera lens may be dirty
+
+These splits re-use outputs inferred for the `ObstacleTrack-all` loader. Calculating metrics:
+
+```bash
+ds_scenes=ObstacleScene-curvy,ObstacleScene-darkasphalt,ObstacleScene-darkasphaltDog,ObstacleScene-darkasphaltAll,ObstacleScene-gravel,ObstacleScene-greyasphalt,ObstacleScene-motorway,ObstacleScene-shiny,ObstacleScene-paving,ObstacleScene-night,ObstacleScene-snowstorm
+
+python -m road_anomaly_benchmark metric PixBinaryClass $methods $ds_scenes
+python -m road_anomaly_benchmark metric SegEval-ObstacleTrack $methods $ds_scenes
+
+python -m road_anomaly_benchmark comparison TableObstacleScenes PixBinaryClass,SegEval-ObstacleTrack $ds_scenes   --names names.json
 ```
 
 ## Implementing a metric

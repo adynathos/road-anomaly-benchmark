@@ -108,11 +108,12 @@ def comparison(comparison_name, method_names, metric_names, dataset_names, order
 					met = f'{metric_name}.{f}'
 					met = rename_metrics.get(met, met)
 					
-					# colname = f'{dset}.{metric_name}.{f}'
-					colname = f'{ds}.{met}'
-					mn = rename_methods.get(method, method)
+					if met:
+						# colname = f'{dset}.{metric_name}.{f}'
+						colname = f'{ds}.{met}'
+						mn = rename_methods.get(method, method)
 
-					get_col(colname)[mn] = v
+						get_col(colname)[mn] = v
 
 	table = DataFrame(data = columns)
 
