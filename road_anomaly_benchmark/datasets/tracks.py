@@ -374,6 +374,7 @@ class DatasetLostAndFound(DatasetRA):
 
 @DatasetRegistry.register_class()
 class DatasetSmallObstacle(DatasetRA):
+	# this dataset needs to be preprocessed: create binary lo
 	configs = [
 		dict(
 			name='SmallObstacleDataset-train',
