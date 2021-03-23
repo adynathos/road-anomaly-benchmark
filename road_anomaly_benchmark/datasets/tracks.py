@@ -122,7 +122,7 @@ class DatasetObstacleTrack(DatasetRA):
 	SCENE_SPLITS = {
 		'curvy': ['curvy-street'],
 		'darkasphalt': ['darkasphalt'],
-		'darkasphaltDog': ['darkasphalt2'], # dog 
+		'darkasphaltDog': ['darkasphalt2'], # dog
 		'darkasphaltAll': ['darkasphalt', 'darkasphalt2'],
 		'gravel': ['gravel'],
 		'greyasphalt': ['greyasphalt'],
@@ -378,31 +378,40 @@ class DatasetSmallObstacle(DatasetRA):
 		dict(
 			name='SmallObstacleDataset-train',
 			split='train',
-			dir_root='/home/datasets/Small_Obstacle_Dataset',
+			dir_root=DIR_DATASETS / 'Small_Obstacle_Dataset',
 			classes=dict(
-				road=1,
-				obstacle=2,
-				ignore=0,
+				road=0,
+				obstacle=1,
+				ignore=255,
+
+				usual = 0,
+				anomaly = 1,
 			),
 		),
 		dict(
 			name='SmallObstacleDataset-test',
 			split='test',
-			dir_root='/home/datasets/Small_Obstacle_Dataset',
+			dir_root=DIR_DATASETS / 'Small_Obstacle_Dataset',
 			classes=dict(
-				road=1,
-				obstacle=2,
-				ignore=0,
+				road=0,
+				obstacle=1,
+				ignore=255,
+
+				usual = 0,
+				anomaly = 1,
 			),
 		),
 		dict(
 			name='SmallObstacleDataset-val',
 			split='val',
-			dir_root='/home/datasets/Small_Obstacle_Dataset',
+			dir_root=DIR_DATASETS / 'Small_Obstacle_Dataset',
 			classes=dict(
-				road=1,
-				obstacle=2,
-				ignore=0,
+				road=0,
+				obstacle=1,
+				ignore=255,
+
+				usual = 0,
+				anomaly = 1,
 			),
 		),
 	]
