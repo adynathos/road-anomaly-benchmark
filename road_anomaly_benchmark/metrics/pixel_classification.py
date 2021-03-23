@@ -10,7 +10,7 @@ from .base import EvaluationMetric, MetricRegistry, save_figure, save_table
 from .pixel_classification_curves import BinaryClassificationCurve, curves_from_cmats, plot_classification_curves, reduce_curve_resolution
 
 from ..evaluation import DIR_OUTPUTS
-from ..jupyter_show_image import adapt_img_data, imwrite
+from ..jupyter_show_image import adapt_img_data, get_heat, imwrite
 
 
 def binary_confusion_matrix(
@@ -141,18 +141,21 @@ class MetricPixelClassification(EvaluationMetric):
 	def name(self):
 		return self.cfg.name
 	
-	def vis_frame(self, fid, dset_name, method_name, mask_roi, anomaly_p, image = None, **_):
+	def vis_frame(self, fid, dset_name, method_name, mask_roi, anomaly_p, image = None, label_pixel_gt = None, **_):
 		h, w = mask_roi.shape[:2]
 
 		canvas = image.copy() if image is not None else np.zeros((h, w, 3), dtype=np.uint8)
-
 		heatmap_color = adapt_img_data(anomaly_p)
-
 		canvas[mask_roi] = canvas[mask_roi]//2 + heatmap_color[mask_roi]//2
-
 		imwrite(
 			DIR_OUTPUTS / f'vis_PixelClassification' / method_name / dset_name / f'{fid}_demo_anomalyP.webp',
 			canvas,
+		)
+
+		anomaly_heat = get_heat(anomaly_p, overlay=label_pixel_gt)
+		imwrite(
+			DIR_OUTPUTS / f'vis_PixelClassification' / method_name / dset_name / f'{fid}_demo_anomalyP_heat.webp',
+			anomaly_heat,
 		)
 
 
@@ -183,7 +186,8 @@ class MetricPixelClassification(EvaluationMetric):
 
 		# visualization
 		if visualize and fid is not None and dset_name is not None and method_name is not None:
-			self.vis_frame(fid=fid, dset_name=dset_name, method_name=method_name, mask_roi=mask_roi, anomaly_p=anomaly_p, **_)
+			self.vis_frame(fid=fid, dset_name=dset_name, method_name=method_name, mask_roi=mask_roi,
+						   anomaly_p=anomaly_p, label_pixel_gt=label_pixel_gt, **_)
 
 		#print('Vrange', np.min(predictions_in_roi), np.mean(predictions_in_roi), np.max(predictions_in_roi))
 
