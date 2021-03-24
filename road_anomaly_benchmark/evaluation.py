@@ -119,7 +119,9 @@ class Evaluation:
 
 			dset = DatasetRegistry.get(dataset_name)
 			metric = MetricRegistry.get(metric_name)
-				
+			
+			metric.init(method_name, dataset_name)
+
 			fr = dset[frame_idx]
 
 			result = metric.process_frame(

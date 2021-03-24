@@ -16,6 +16,9 @@ class EvaluationMetric:
 	def __init__(self, cfg):
 		self.cfg = EasyDict(cfg)
 
+	def init(self, method_name, dataset_name):
+		...
+
 	def process_frame(self, label_pixel_gt : np.ndarray, anomaly_p : np.ndarray, dset_name : str=None, method_name : str=None, visualize : bool = True, **_):
 		"""
 		@param frame: dict containing frame fields, such as `image`, `semantic_class_gt`, `pred_anomaly_p`
