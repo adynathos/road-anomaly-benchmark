@@ -90,10 +90,12 @@ def comparison(comparison_name, method_names, metric_names, dataset_names, order
 		else:
 			return columns.setdefault(name, Series(dtype=np.float64))
 
-	for metric_name in metric_names:
-		metric = MetricRegistry.get(metric_name)
 
-		for dset in dataset_names:
+
+	for dset in dataset_names:
+		for metric_name in metric_names:
+			metric = MetricRegistry.get(metric_name)
+	
 			ags = [
 				metric.load(method_name = method, dataset_name = dset)
 				for method in method_names
