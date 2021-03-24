@@ -213,7 +213,7 @@ class MetricSegment(EvaluationMetric):
 
         sIoU_gt_mean = sum(np.sum(r.sIoU_gt) for r in frame_results) / sum(len(r.sIoU_gt) for r in frame_results)
         sIoU_pred_mean = sum(np.sum(r.sIoU_pred) for r in frame_results) / sum(len(r.sIoU_pred) for r in frame_results)
-        ag_results = {"tp_mean" : 0, "fn_mean" : 0, "fp_mean" : 0, "f1_mean" : 0,
+        ag_results = {"tp_mean" : 0., "fn_mean" : 0., "fp_mean" : 0., "f1_mean" : 0.,
                       "sIoU_gt" : sIoU_gt_mean, "sIoU_pred" : sIoU_pred_mean}
         print("Mean sIoU GT   :", sIoU_gt_mean)
         print("Mean sIoU PRED :", sIoU_pred_mean)
