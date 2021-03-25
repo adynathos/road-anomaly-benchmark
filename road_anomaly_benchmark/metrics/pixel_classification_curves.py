@@ -147,7 +147,9 @@ def select_points_for_curve(x, y, num_points, value_range=(0, 1)):
 	idx = 0
 	for thr in thresholds:
 		# binary search for the next threshold
-		idx += np.searchsorted(x[idx:], thr)
+		ofs= np.searchsorted(x[idx:], thr)
+		# print(f'{idx}/{x.size} + {ofs} thr {thr}')
+		idx += ofs
 		indices.append(idx)
 
 
@@ -183,7 +185,7 @@ def reduce_curve_resolution(cinfo : BinaryClassificationCurve, num_pts : int = 1
 		return cinfo
 
 	prc = select_points_for_curve(
-		1-cinfo.curve_recall, 
+		cinfo.curve_recall, 
 		cinfo.curve_precision, 
 		num_points = num_pts,
 	)
@@ -198,7 +200,7 @@ def reduce_curve_resolution(cinfo : BinaryClassificationCurve, num_pts : int = 1
 	
 	return dataclasses.replace(
 		cinfo,
-		curve_recall = 1-prc['curve_x'],
+		curve_recall = prc['curve_x'],
 		curve_precision = prc['curve_y'],
 		# curve_fpr = roc['curve_x']
 		# curve_tpr = roc['curve_y']
@@ -212,29 +214,31 @@ def plot_classification_curves_draw_entry(plot_roc : pyplot.Axes, plot_prc : pyp
 
 	if plot_prc is not None:
 		curves = select_points_for_curve(
-			1-curve_info.curve_recall, 
+			curve_info.curve_recall, 
 			curve_info.curve_precision, 
-			num_points = 128,
+			num_points = 256,
 		)
-		curve_recall = 1-curves['curve_x']
+		curve_recall = curves['curve_x']
 		curve_precision = curves['curve_y']
+		# curve_recall = ci_red.curve_recall
+		# curve_precision = ci_red.curve_precision
 
 		plot_prc.plot(curve_recall, curve_precision,
 			# label='{lab:<24}{a:.02f}'.format(lab=label, a=area_under),
 			label=f'{curve_info.area_PRC:.02f} {display_name}',
-			marker = '.',
+			#marker = '.',
 		)
 
 	if plot_roc is not None:
 		curves = select_points_for_curve(
-			1-curve_info.curve_fpr, 
-			curve_info.curve_precision, 
-			num_points = 128,
+			curve_info.curve_fpr, 
+			curve_info.curve_tpr, 
+			num_points = 256,
 		)
-		curve_recall = 1-curves['curve_x']
-		curve_precision = curves['curve_y']
+		curve_fpr = curves['curve_x']
+		curve_tpr = curves['curve_y']
 
-		plot_roc.plot(curve_info.curve_fpr, curve_info.curve_tpr,
+		plot_roc.plot(curve_fpr, curve_tpr,
 			# label='{lab:<24}{a:.02f}'.format(lab=label, a=area_under),
 			label=f'{curve_info.area_ROC:.03f} {display_name}',
 			marker = '.',
