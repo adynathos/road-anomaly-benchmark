@@ -210,7 +210,21 @@ def reduce_curve_resolution(cinfo : BinaryClassificationCurve, num_pts : int = 1
 	)
 
 
-def plot_classification_curves_draw_entry(plot_roc : pyplot.Axes, plot_prc : pyplot.Axes, curve_info : BinaryClassificationCurve, display_name : str):
+def plot_classification_curves_draw_entry(plot_roc : pyplot.Axes, plot_prc : pyplot.Axes, curve_info : BinaryClassificationCurve, display_name : str, format=None):
+
+	fmt_args = {}
+
+	if format is not None:
+		segs = format.split()
+
+		if segs.__len__() >= 1:
+			fmt_args['color'] = segs[0]
+
+		if segs.__len__() >= 2:
+			fmt_args['linestyle'] = segs[1]
+
+		if segs.__len__() >= 3:
+			fmt_args['marker'] = segs[2]
 
 	if plot_prc is not None:
 		curves = select_points_for_curve(
@@ -227,6 +241,7 @@ def plot_classification_curves_draw_entry(plot_roc : pyplot.Axes, plot_prc : pyp
 			# label='{lab:<24}{a:.02f}'.format(lab=label, a=area_under),
 			label=f'{curve_info.area_PRC:.02f} {display_name}',
 			#marker = '.',
+			**fmt_args,
 		)
 
 	if plot_roc is not None:
@@ -239,13 +254,15 @@ def plot_classification_curves_draw_entry(plot_roc : pyplot.Axes, plot_prc : pyp
 		curve_tpr = curves['curve_y']
 
 		plot_roc.plot(curve_fpr, curve_tpr,
+			#fmt,
 			# label='{lab:<24}{a:.02f}'.format(lab=label, a=area_under),
 			label=f'{curve_info.area_ROC:.03f} {display_name}',
-			marker = '.',
+			# marker = '.',
+			**fmt_args,
 		)
 
 
-def plot_classification_curves(curve_infos : List[BinaryClassificationCurve], method_names : Dict[str, str] = {}):
+def plot_classification_curves(curve_infos : List[BinaryClassificationCurve], method_names : Dict[str, str] = {}, plot_formats = {}):
 	
 	table_scores = DataFrame(data = [
 		Series({
@@ -283,6 +300,7 @@ def plot_classification_curves(curve_infos : List[BinaryClassificationCurve], me
 			plot_roc = plot_roc, 
 			curve_info = crv,
 			display_name = method_names.get(crv.method_name, crv.method_name),
+			format = plot_formats.get(crv.method_name),
 		)
 
 	def make_legend(plot_obj, position='lower right', title=None):

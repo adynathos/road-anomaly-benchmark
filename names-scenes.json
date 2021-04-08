@@ -54,5 +54,8 @@
 		"voidclassifier": "Void classifier",
 		"dropout": "MC droput",
 		"Resynth2048Orig": "Image Resynthesis"
+	},
+	"plots": {
+		
 	}
 } 
