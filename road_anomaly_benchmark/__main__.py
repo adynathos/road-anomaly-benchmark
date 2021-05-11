@@ -134,10 +134,18 @@ def comparison(comparison_name, method_names, metric_names, dataset_names, order
 		float_format = float_format,
 	)
 
+	# json dump for website
+	table['method'] = table.index
+	table_json = table.to_json(orient='records')
+	table_data = json.loads(table_json)
+	table_data = [{k.replace('.', '-'): v for k, v in r.items()} for r in table_data]
+	table_json = json.dumps(table_data)
+
 	out_f = DIR_OUTPUTS / 'tables' / comparison_name
 	out_f.parent.mkdir(parents=True, exist_ok=True)
 	out_f.with_suffix('.html').write_text(table_html)
 	out_f.with_suffix('.tex').write_text(table_tex)
+	out_f.with_suffix('.json').write_text(table_json)
 
 
 main()	
