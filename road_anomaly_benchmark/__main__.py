@@ -61,7 +61,7 @@ def metric(method_names, metric_names, dataset_names, limit_length, parallel, fr
 @click.argument('dataset_names', type=str)
 @click.option('--order-by', type=str, default=None)
 @click.option('--names', type=click.Path(exists=True, file_okay=True, dir_okay=False))
-def comparison(comparison_name, method_names, metric_names, dataset_names, order_by=None, names=None):
+def comparison(comparison_name, method_names, metric_names, dataset_names, order_by=None, names=None, plot_formats=None):
 
 	method_names = name_list(method_names)
 	metric_names = name_list(metric_names)
@@ -75,11 +75,12 @@ def comparison(comparison_name, method_names, metric_names, dataset_names, order
 		rename_dsets = rename_map.get('datasets', {})
 		rename_metrics = rename_map.get('metrics', {})
 
+		plot_formats = rename_map.get('plots', {})
+
 		order_by = rename_metrics.get(order_by, order_by)
 
 	else:
-		rename_methods = rename_dsets = rename_metrics = {}
-
+		rename_methods = rename_dsets = rename_metrics = plot_formats = {}
 
 	columns = {}
 
@@ -90,16 +91,23 @@ def comparison(comparison_name, method_names, metric_names, dataset_names, order
 		else:
 			return columns.setdefault(name, Series(dtype=np.float64))
 
-	for metric_name in metric_names:
-		metric = MetricRegistry.get(metric_name)
 
-		for dset in dataset_names:
+
+	for dset in dataset_names:
+		for metric_name in metric_names:
+			metric = MetricRegistry.get(metric_name)
+	
 			ags = [
 				metric.load(method_name = method, dataset_name = dset)
 				for method in method_names
 			]
-			# TODO provide method name map
-			metric.plot_many(ags, f'{comparison_name}_{dset}')
+
+			metric.plot_many(
+				ags, 
+				f'{comparison_name}_{dset}', 
+				method_names = rename_methods,
+				plot_formats = plot_formats,
+			)
 
 			for ag, method in zip(ags, method_names):
 				for f, v in metric.extracts_fields_for_table(ag).items():
@@ -114,6 +122,7 @@ def comparison(comparison_name, method_names, metric_names, dataset_names, order
 						mn = rename_methods.get(method, method)
 
 						get_col(colname)[mn] = v
+
 
 	table = DataFrame(data = columns)
 

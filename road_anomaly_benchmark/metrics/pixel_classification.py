@@ -289,14 +289,14 @@ class MetricPixelClassification(EvaluationMetric):
 	def fields_for_table(self):
 		return ['area_PRC', 'tpr95_fpr', 'best_f1']
 
-	def plot_many(self, aggregated_results : List, comparison_name : str, close : bool = True):
+	def plot_many(self, aggregated_results : List, comparison_name : str, close : bool = True, method_names={}, plot_formats={}):
 
 		cinfos = [
 			reduce_curve_resolution(cinfo, num_pts=256)
 			for cinfo in aggregated_results
 		]
 
-		vis_res = plot_classification_curves(cinfos)
+		vis_res = plot_classification_curves(cinfos, method_names=method_names, plot_formats=plot_formats)
 		fig = vis_res.plot_figure
 		table = vis_res.score_table
 			

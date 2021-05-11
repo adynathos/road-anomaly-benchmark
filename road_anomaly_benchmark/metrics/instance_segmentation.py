@@ -213,7 +213,7 @@ class MetricSegment(EvaluationMetric):
 
         sIoU_gt_mean = sum(np.sum(r.sIoU_gt) for r in frame_results) / sum(len(r.sIoU_gt) for r in frame_results)
         sIoU_pred_mean = sum(np.sum(r.sIoU_pred) for r in frame_results) / sum(len(r.sIoU_pred) for r in frame_results)
-        ag_results = {"tp_mean" : 0, "fn_mean" : 0, "fp_mean" : 0, "f1_mean" : 0,
+        ag_results = {"tp_mean" : 0., "fn_mean" : 0., "fp_mean" : 0., "f1_mean" : 0.,
                       "sIoU_gt" : sIoU_gt_mean, "sIoU_pred" : sIoU_pred_mean}
         print("Mean sIoU GT   :", sIoU_gt_mean)
         print("Mean sIoU PRED :", sIoU_pred_mean)
@@ -250,7 +250,7 @@ class MetricSegment(EvaluationMetric):
         seg_info = ResultsInfo(
             method_name=method_name,
             dataset_name=dataset_name,
-            **EasyDict(ag_results),
+            **ag_results,
         )
 
         return seg_info
@@ -269,6 +269,9 @@ class MetricSegment(EvaluationMetric):
     def fields_for_table(self):
         return ['sIoU_gt', 'sIoU_pred', 'fn_25', 'fp_25', 'f1_25', 'fn_50', 'fp_50', 'f1_50',
                 'fn_75', 'fp_75', 'f1_75', 'f1_mean']
+
+    def init(self, method_name, dataset_name):
+        self.get_thresh_p_from_curve(method_name, dataset_name)
 
     def get_thresh_p_from_curve(self, method_name, dataset_name):
         out_path = DIR_OUTPUTS / "PixBinaryClass" / 'data' / f'PixClassCurve_{method_name}_{dataset_name}.hdf5'

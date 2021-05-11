@@ -42,7 +42,8 @@ class Registry:
 
 			if init_func is None:
 				dslist = '\n '.join(self.list_available_dsets())
-				raise KeyError(f'No dataset called {name} in registry, avaiable datasets:\n {dslist}')
+				# KeyError can't display newlines https://stackoverflow.com/questions/46892261/new-line-on-error-message-in-keyerror-python-3-3
+				raise ValueError(f'No dataset called {name} in registry, avaiable datasets:\n {dslist}')
 
 			else:
 				obj = init_func()

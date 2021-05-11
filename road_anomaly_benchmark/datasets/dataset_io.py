@@ -185,6 +185,13 @@ class DatasetBase:
 			out_fr[ch_name] = self.channels[ch_name].read(dset=self, **fr)
 
 		return out_fr
+	
+	def check_size(self):
+		desired_len = self.cfg.get('expected_length')
+		actual_len = self.__len__()
+
+		if desired_len is not None and actual_len != desired_len:
+			raise ValueError(f'The dataset should have {desired_len} frames but found {actual_len}')
 
 	def iter(self, *channels):
 		"""
