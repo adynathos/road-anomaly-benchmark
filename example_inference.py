@@ -7,15 +7,19 @@ from road_anomaly_benchmark.evaluation import Evaluation
 def method_dummy(image, **_):
 	""" Very naive method: return color saturation """
 	image_hsv = cv.cvtColor(image, cv.COLOR_RGB2HSV_FULL)
-	anomaly_p = image_hsv[:, :, 1].astype(np.float) * (1./255.)
+	anomaly_p = image_hsv[:, :, 1].astype(np.float32) * (1./255.)
 	return anomaly_p
 
 
 def main():
 
-	ev = Evaluation(method_name = 'Dummy', dataset_name = 'RoadObstacleTrack-test')
+	ev = Evaluation(
+		method_name = 'Dummy', 
+		dataset_name = 'ObstacleTrack-all',
+		# dataset_name = 'AnomalyTrack-test',
+	)
 
-	for frame in tqdm(ev.get_dataset()):
+	for frame in tqdm(ev.get_frames()):
 		# run method here
 		result = method_dummy(frame.image)
 		# provide the output for saving

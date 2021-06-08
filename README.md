@@ -15,30 +15,46 @@
 ### Inference
 
 * Place the datasets in `./datasets` (or override with env var `DIR_DATASETS`)
-  * `dataset_ObstacleTrack`
-  * `dataset_RoadAnomalyTrack`
-  * `dataset_LostAndFound` (or provide location in env `DSET_LAF`)
-  * `dataset_FishyLAF` (or provide location in env `DSET_FISHY_LAF`)
+	* `dataset_ObstacleTrack`
+	* `dataset_RoadAnomalyTrack`
+	* `dataset_LostAndFound` (or provide location in env `DSET_LAF`)
+	* `dataset_FishyLAF` (or provide location in env `DSET_FISHY_LAF`)
 
 * Run inference and store results in files. Run inference for the following splits, as the other splits are subsets of those:
-  * `RoadAnomalyTrack-test`
-  * `ObstacleTrack-all`
-  * `LostAndFound-test`
-  * `LostAndFound-train`
+	* `RoadAnomalyTrack-test`
+	* `ObstacleTrack-all`
+	* `LostAndFound-test`
+	* `LostAndFound-train`
 
 ```python
+import numpy as np
+from tqdm import tqdm
+import cv2 as cv
 from road_anomaly_benchmark.evaluation import Evaluation
 
-ev = Evaluation(
-    method_name = 'Resynthesis',
-    dataset_name = 'ObstacleTrack-all',
-)
+def method_dummy(image, **_):
+	""" Very naive method: return color saturation """
+	image_hsv = cv.cvtColor(image, cv.COLOR_RGB2HSV_FULL)
+	anomaly_p = image_hsv[:, :, 1].astype(np.float32) * (1./255.)
+	return anomaly_p
 
-for fr in ev.get_frames():
-    anomaly_p = my_method(fr.image)
-    ev.save_result(fr, anomaly_p)
 
-ev.wait_to_finish_saving()
+def main():
+
+	ev = Evaluation(
+		method_name = 'Dummy', 
+		dataset_name = 'ObstacleTrack-all',
+		# dataset_name = 'AnomalyTrack-test',
+	)
+
+	for frame in tqdm(ev.get_frames()):
+		# run method here
+		result = method_dummy(frame.image)
+		# provide the output for saving
+		ev.save_output(frame, result)
+
+	# wait for the background threads which are saving
+	ev.wait_to_finish_saving()
 ```
 
 The files will be stored in `./outputs/anomaly_p/...`. The storage directory can be overriden with env var `DIR_OUTPUTS`.
