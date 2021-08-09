@@ -21,7 +21,7 @@
 	* `dataset_FishyLAF` (or provide location in env `DSET_FISHY_LAF`)
 
 * Run inference and store results in files. Run inference for the following splits, as the other splits are subsets of those:
-	* `RoadAnomalyTrack-test`
+	* `AnomalyTrack-test`
 	* `ObstacleTrack-all`
 	* `LostAndFound-test`
 	* `LostAndFound-train`
@@ -63,13 +63,13 @@ The files will be stored in `./outputs/anomaly_p/...`. The storage directory can
 
 This step will also create plots in `./outputs/{metric}`
 
-* Metrics for anomaly track, splits *RoadAnomalyTrack-test, FishyLAFAnomaly-val*
+* Metrics for anomaly track, splits *AnomalyTrack-test, FishyLAFAnomaly-val*
 
 ```bash
 methods=Method1,Method2
 
-python -m road_anomaly_benchmark metric PixBinaryClass $methods RoadAnomalyTrack-test,FishyLAFAnomaly-val
-python -m road_anomaly_benchmark metric SegEval-AnomalyTrack $methods RoadAnomalyTrack-test,FishyLAFAnomaly-val
+python -m road_anomaly_benchmark metric PixBinaryClass $methods AnomalyTrack-test,FishyLAFAnomaly-val
+python -m road_anomaly_benchmark metric SegEval-AnomalyTrack $methods AnomalyTrack-test,FishyLAFAnomaly-val
 ```
 
 * Metrics for obstacle track, splits: *ObstacleTrack-test, LostAndFound-testNoKnown*
@@ -139,16 +139,3 @@ python -m road_anomaly_benchmark comparison TableObstacleScenes PixBinaryClass,S
 A metric should implement the `EvaluationMetric` interface from ([road_anomaly_benchmark/metrics/base.py](road_anomaly_benchmark/metrics/base.py).
 See `MetricPixelClassification` from [road_anomaly_benchmark/metrics/pixel_classification.py](road_anomaly_benchmark/metrics/pixel_classification.py).
 
-
-
-
-### Calculate segment metrics
-
-* Anomaly Track
-```bash
-python -m road_anomaly_benchmark metric SegEval-AnomalyTrack <method> RoadAnomalyTrack-test
-```
-* Obstacle Track
-```bash
-python -m road_anomaly_benchmark metric SegEval-ObstacleTrack <method> RoadObstacleTrack-test
-```

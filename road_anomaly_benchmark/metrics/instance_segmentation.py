@@ -227,11 +227,11 @@ class MetricSegment(EvaluationMetric):
                 ag_results["fn_" + str(int(t * 100))] = fn
                 ag_results["fp_" + str(int(t * 100))] = fp
                 ag_results["f1_" + str(int(t * 100))] = f1
-            print("---sIoU thresh =", t)
-            print("Number of TPs  :", tp)
-            print("Number of FNs  :", fn)
-            print("Number of FPs  :", fp)
-            print("F1 score       :", f1)
+            # print("---sIoU thresh =", t)
+            # print("Number of TPs  :", tp)
+            # print("Number of FNs  :", fn)
+            # print("Number of FPs  :", fp)
+            # print("F1 score       :", f1)
             ag_results["tp_mean"] += tp
             ag_results["fn_mean"] += fn
             ag_results["fp_mean"] += fp

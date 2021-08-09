@@ -116,6 +116,7 @@ class DatasetObstacleTrack(DatasetRA):
 		'darkasphalt2', # RO 2020 dog
 		'snowstorm1', 'snowstorm2', # RO 2021
 		'driveway', # night
+		'validation',
 	}
 
 	# splits for per-scene breakdown
@@ -131,6 +132,7 @@ class DatasetObstacleTrack(DatasetRA):
 		'paving': ['paving'],
 		'night': ['driveway'],
 		'snowstorm': ['snowstorm1', 'snowstorm2'],
+		'validation': ['validation'],
 	}
 
 	configs = [
@@ -167,6 +169,13 @@ class DatasetObstacleTrack(DatasetRA):
 			name = 'ObstacleTrack-snowstorm',
 			scenes = {'snowstorm1', 'snowstorm2'},
 			expected_length = 55,
+			**DEFAULTS,
+		),
+		dict(
+			# validation
+			name='ObstacleTrack-validation',
+			scenes={'validation'},
+			expected_length=40,
 			**DEFAULTS,
 		),
 	]

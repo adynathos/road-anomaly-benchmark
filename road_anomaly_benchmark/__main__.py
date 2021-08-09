@@ -102,12 +102,13 @@ def comparison(comparison_name, method_names, metric_names, dataset_names, order
 				for method in method_names
 			]
 
-			metric.plot_many(
-				ags, 
-				f'{comparison_name}_{dset}', 
-				method_names = rename_methods,
-				plot_formats = plot_formats,
-			)
+			if "PixBinaryClass" in metric_name:
+				metric.plot_many(
+					ags,
+					f'{comparison_name}_{dset}',
+					method_names = rename_methods,
+					plot_formats = plot_formats,
+				)
 
 			for ag, method in zip(ags, method_names):
 				for f, v in metric.extracts_fields_for_table(ag).items():
