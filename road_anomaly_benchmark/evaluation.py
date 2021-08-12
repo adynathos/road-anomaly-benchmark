@@ -48,6 +48,9 @@ class Evaluation:
 	def get_frames(self):
 		return self.get_dataset().iter('image')
 
+	def __len__(self):
+		return self.get_dataset().__len__()
+
 	@staticmethod
 	def write_task(channel, value, extra):
 		try:

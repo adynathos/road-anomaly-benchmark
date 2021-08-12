@@ -1,8 +1,9 @@
-import importlib
+import click
 from tqdm import tqdm
 from road_anomaly_benchmark.evaluation import Evaluation
+from methods import baselines as baselines_module
 
-methods = {
+METHOD_KEYS = {
     "Mahalanobis": "O5AMylqoSaq5Wjc",
     "Max_softmax": "WVFTc4ka37xASZV",
     "ODIN": "WVFTc4ka37xASZV",
@@ -10,24 +11,40 @@ methods = {
     "SynBoost": "0",
 }
 
+def name_list(name_list):
+	return [name for name in name_list.split(',') if name]
 
-def main():
-    for methodname, modelid in methods.items():
-        print("\nmethod_name:", methodname)
-        method_object = getattr(importlib.import_module("methods.baselines"), methodname)
+@click.command()
+@click.option('--methods', default='ALL', help=f'Which methods to run, ALL or some of {list(METHOD_KEYS.keys())}')
+@click.option('--dsets', default='ObstacleTrack-validation', help='List of datasets to evaluate on, ex: ObstacleTrack-validation,LostAndFound-testNoKnown')
+def main(methods, dsets):
+    if methods == 'ALL':
+        methods = list(METHOD_KEYS.keys())
+    else:
+        methods = name_list(methods)
+
+    dataset_names = name_list(dsets)
+
+    for methodname in methods:
+        modelid = METHOD_KEYS[methodname]
+        method_object = getattr(baselines_module, methodname)
         method = method_object(modelid)
 
-        ev = Evaluation(
-            method_name=methodname,
-            # dataset_name = 'ObstacleTrack-all',
-            # dataset_name='AnomalyTrack-test',
-            dataset_name='ObstacleTrack-validation',
-        )
+        for dset in dataset_names:
+            print(f"-- Method {methodname} vs Dataset {dset} --")
 
-        for frame in tqdm(ev.get_frames()):
-            result = method.anomaly_score(frame.image)
-            ev.save_output(frame, result)
-        ev.wait_to_finish_saving()
+            ev = Evaluation(
+                method_name = methodname,
+                # dataset_name = 'ObstacleTrack-all',
+                # dataset_name='AnomalyTrack-test',
+                dataset_name = dset,
+            )
+
+            for frame in tqdm(ev.get_frames(), total=ev.__len__()):
+                result = method.anomaly_score(frame.image)
+                ev.save_output(frame, result)
+            
+            ev.wait_to_finish_saving()
 
 
 if __name__ == '__main__':

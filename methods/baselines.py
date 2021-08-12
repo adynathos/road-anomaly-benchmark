@@ -1,5 +1,9 @@
 import os
 import random
+from pathlib import Path
+from .utils import download_checkpoint, download_zip, init_pytorch_DeepWV3Plus, get_softmax, get_calibrated_softmax, \
+    mahalanobis_modification, get_activations, load_gdrive_file
+import numpy as np
 import torch
 import h5py
 import numpy as np
@@ -16,16 +20,16 @@ from .utils import download_checkpoint, download_zip, init_pytorch_DeepWV3Plus, 
     mahalanobis_modification, get_activations, load_gdrive_file, download_tar, get_segmentation, get_synthesis, \
     get_dissimilarity, get_synboost_transformations
 
-load_dir = "/tmp/checkpoints/"
 
+DIR_CHECKPOINTS = Path(os.environ.get('DIR_SEGMENTME_BASELINES', "/tmp/checkpoints/"))
 
 class Max_softmax:
     def __init__(self, modelid):
-        checkpoint_path = os.path.join(load_dir, "DeepLabV3+_WideResNet38_baseline.pth")
-        if not os.path.exists(checkpoint_path):
+        checkpoint_path = DIR_CHECKPOINTS / "DeepLabV3+_WideResNet38_baseline.pth"
+        if not checkpoint_path.is_file():
             checkpoint_download_url = os.path.join("https://uni-wuppertal.sciebo.de/s/", modelid, "download")
-            filename = download_checkpoint(checkpoint_download_url, load_dir)
-            os.rename(os.path.join(load_dir, filename), checkpoint_path)
+            filename = download_checkpoint(checkpoint_download_url, DIR_CHECKPOINTS)
+            (DIR_CHECKPOINTS / filename).rename(checkpoint_path)
         self.model = init_pytorch_DeepWV3Plus(checkpoint_path)
 
     def anomaly_score(self, image):
@@ -37,11 +41,11 @@ class ODIN:
     def __init__(self, modelid, magnitude=0.0001, temperature=3.0):
         self.magnitude = magnitude  # default magnitude tuned on LaF
         self.temperature = temperature  # default temperature tuned on LaF
-        checkpoint_path = os.path.join(load_dir, "DeepLabV3+_WideResNet38_baseline.pth")
-        if not os.path.exists(checkpoint_path):
+        checkpoint_path = DIR_CHECKPOINTS / "DeepLabV3+_WideResNet38_baseline.pth"
+        if not checkpoint_path.is_file():
             checkpoint_download_url = os.path.join("https://uni-wuppertal.sciebo.de/s/", modelid, "download")
-            filename = download_checkpoint(checkpoint_download_url, load_dir)
-            os.rename(os.path.join(load_dir, filename), checkpoint_path)
+            filename = download_checkpoint(checkpoint_download_url, DIR_CHECKPOINTS)
+            (DIR_CHECKPOINTS / filename).rename(checkpoint_path)
         self.model = init_pytorch_DeepWV3Plus(checkpoint_path)
 
     def anomaly_score(self, image):
@@ -51,9 +55,9 @@ class ODIN:
 
 class Mahalanobis:
     def __init__(self, modelid):
-        checkpoint_path = os.path.join(load_dir, "DeepLabV3+_WideResNet38_baseline.pth")
-        estimates_path = os.path.join(load_dir, "cityscapes_train_estimates_global.h5")
-        if not os.path.exists(checkpoint_path) or not os.path.exists(estimates_path):
+        checkpoint_path = DIR_CHECKPOINTS / "DeepLabV3+_WideResNet38_baseline.pth"
+        estimates_path = DIR_CHECKPOINTS / "cityscapes_train_estimates_global.h5"
+        if not checkpoint_path.is_file() or not estimates_path.is_file():
             zip_download_url = os.path.join("https://uni-wuppertal.sciebo.de/s/", modelid, "download")
             filename = download_zip(zip_download_url, load_dir)
             os.remove(filename)
@@ -83,11 +87,11 @@ class Mahalanobis:
 class Entropy_max:
     """Code from https://github.com/robin-chan/meta-ood"""
     def __init__(self, modelid):
-        checkpoint_path = os.path.join(load_dir, "DeepLabV3+_WideResNet38_epoch_4_alpha_0.9.pth")
-        if not os.path.exists(checkpoint_path):
+        checkpoint_path = DIR_CHECKPOINTS / "DeepLabV3+_WideResNet38_epoch_4_alpha_0.9.pth"
+        if not checkpoint_path.is_file():
             checkpoint_download_url = os.path.join("https://uni-wuppertal.sciebo.de/s/", modelid, "download")
-            filename = download_checkpoint(checkpoint_download_url, load_dir)
-            os.rename(os.path.join(load_dir, filename), checkpoint_path)
+            filename = download_checkpoint(checkpoint_download_url, DIR_CHECKPOINTS)
+            (DIR_CHECKPOINTS / filename).rename(checkpoint_path)
         self.model = init_pytorch_DeepWV3Plus(checkpoint_path)
 
     def anomaly_score(self, image):
@@ -97,9 +101,9 @@ class Entropy_max:
 
 class voidclassifier:
     def __init__(self, modelid):
-        load_gdrive_file(modelid, load_dir)
+        load_gdrive_file(modelid, str(DIR_CHECKPOINTS))
         tf.compat.v1.enable_resource_variables()
-        self.model = tf.saved_model.load(load_dir)
+        self.model = tf.saved_model.load(str(DIR_CHECKPOINTS))
 
     def anomaly_score(self, image):
         image = tf.cast(image, tf.float32)
@@ -112,9 +116,9 @@ class voidclassifier:
 
 class dropout:
     def __init__(self, modelid):
-        load_gdrive_file(modelid, load_dir)
+        load_gdrive_file(modelid, str(DIR_CHECKPOINTS))
         tf.compat.v1.enable_resource_variables()
-        self.model = tf.saved_model.load(load_dir)
+        self.model = tf.saved_model.load(str(DIR_CHECKPOINTS))
 
     def anomaly_score(self, image):
         image = tf.cast(image, tf.float32)
@@ -127,9 +131,9 @@ class dropout:
 
 class mindensity:
     def __init__(self, modelid):
-        load_gdrive_file(modelid, load_dir)
+        load_gdrive_file(modelid, str(DIR_CHECKPOINTS))
         tf.compat.v1.enable_resource_variables()
-        self.model = tf.saved_model.load(load_dir)
+        self.model = tf.saved_model.load(str(DIR_CHECKPOINTS))
 
     def anomaly_score(self, image):
         image = tf.cast(image, tf.float32)

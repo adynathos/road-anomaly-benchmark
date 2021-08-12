@@ -1,22 +1,24 @@
+from pathlib import Path
+from zipfile import ZipFile
+import os
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torchvision.transforms import Compose, ToTensor, Normalize, Resize
 from zipfile import ZipFile
+from PIL import Image
+
+import wget
 import gdown
+import tarfile
+import yaml
 
 from .image_segmentation.network.deepv3 import DeepWV3Plus
 from .image_segmentation.network.mynn import Norm2d
-
-import wget
-import os
-import tarfile
-
-import yaml
 from .image_dissimilarity.models.dissimilarity_model import DissimNetPrior, DissimNet
 from .image_synthesis.models.pix2pix_model import Pix2PixModel
 from .image_segmentation.optimizer import restore_snapshot
-from PIL import Image
 from .image_dissimilarity.models.vgg_features import VGG19_difference
 
 
@@ -35,9 +37,8 @@ def init_pytorch_DeepWV3Plus(ckpt_path=None, num_classes=19):
 
 def download_checkpoint(url, save_dir):
     print("Download PyTorch checkpoint")
-    if not os.path.exists(save_dir):
-        os.makedirs(save_dir)
-    filename = wget.download(url, out=save_dir)
+    Path(save_dir).mkdir(parents=True, exist_ok=True)
+    filename = wget.download(url, out=str(save_dir))
     return filename
 
 
@@ -53,10 +54,9 @@ def download_tar(url, save_dir):
 
 def download_zip(url, save_dir):
     print("Download .zip and de-compress")
-    if not os.path.exists(save_dir):
-        os.makedirs(save_dir)
-    filename = wget.download(url, out=save_dir)
-    with ZipFile(os.path.join(save_dir, filename), 'r') as zip_ref:
+    Path(save_dir).mkdir(parents=True, exist_ok=True)
+    filename = wget.download(url, out=str(save_dir))
+    with ZipFile(Path(save_dir) / filename, 'r') as zip_ref:
         zip_ref.extractall(save_dir)
     return filename
 
