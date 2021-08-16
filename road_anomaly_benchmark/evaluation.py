@@ -14,6 +14,12 @@ from .datasets import DatasetRegistry
 from .datasets.dataset_io import ChannelLoaderHDF5
 from .metrics import MetricRegistry
 
+
+try:
+	import cv2 as cv
+except:
+	...
+
 log = logging.getLogger(__name__)
 
 
@@ -124,12 +130,17 @@ class Evaluation:
 
 			fr = dset[frame_idx]
 
+			heatmap = cls.channels['anomaly_p'].read(
+				method_name = method_name, 
+				dset_name = fr.dset_name,
+				fid = fr.fid,
+			)
+
+			if heatmap.shape[1] < fr.image.shape[1]:
+				heatmap = cv.resize(heatmap.astype(np.float32), fr.image.shape[:2][::-1], interpolation=cv.INTER_LINEAR)
+
 			result = metric.process_frame(
-				anomaly_p = cls.channels['anomaly_p'].read(
-					method_name = method_name, 
-					dset_name = fr.dset_name,
-					fid = fr.fid,
-				),
+				anomaly_p = heatmap,
 				method_name = method_name, 
 				visualize = frame_vis,
 				**fr,
