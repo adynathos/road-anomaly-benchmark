@@ -1,19 +1,28 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torchvision.transforms import Compose, ToTensor, Normalize
+from torchvision.transforms import Compose, ToTensor, Normalize, Resize
 from zipfile import ZipFile
 import gdown
 
-from .models.deepv3 import DeepWV3Plus
-from .models.mynn import Norm2d
+from .image_segmentation.network.deepv3 import DeepWV3Plus
+from .image_segmentation.network.mynn import Norm2d
 
 import wget
 import os
+import tarfile
+
+import yaml
+from .image_dissimilarity.models.dissimilarity_model import DissimNetPrior, DissimNet
+from .image_synthesis.models.pix2pix_model import Pix2PixModel
+from .image_segmentation.optimizer import restore_snapshot
+from PIL import Image
+from .image_dissimilarity.models.vgg_features import VGG19_difference
 
 
 def init_pytorch_DeepWV3Plus(ckpt_path=None, num_classes=19):
     print("Load PyTorch model", end="", flush=True)
+    torch.cuda.empty_cache()
     network = nn.DataParallel(DeepWV3Plus(num_classes))
     print("... ok")
     if ckpt_path is not None:
@@ -32,8 +41,18 @@ def download_checkpoint(url, save_dir):
     return filename
 
 
+def download_tar(url, save_dir):
+    print("Download .tar and de-compress")
+    if not os.path.exists(save_dir):
+        os.makedirs(save_dir)
+    filename = wget.download(url, out=save_dir)
+    with tarfile.open(os.path.join(save_dir, filename), 'r') as tar_file:
+        tar_file.extractall(save_dir)
+    return filename
+
+
 def download_zip(url, save_dir):
-    print("Download .zip")
+    print("Download .zip and de-compress")
     if not os.path.exists(save_dir):
         os.makedirs(save_dir)
     filename = wget.download(url, out=save_dir)
@@ -125,3 +144,69 @@ def get_activations(network, image, transform=None, as_numpy=True):
     return y
 
 
+def get_segmentation(checkpoint_dir, opt):
+    net = init_pytorch_DeepWV3Plus()
+    print('Segmentation Net Built.')
+    snapshot = os.path.join(checkpoint_dir, opt.snapshot)
+    segmentation_net, _ = restore_snapshot(net, optimizer=None, snapshot=snapshot, restore_optimizer_bool=False)
+    segmentation_net.eval()
+    print('Segmentation Net Restored.')
+    return segmentation_net
+
+
+def get_synthesis(checkpoints_dir, opt):
+    # Get Synthesis Net
+    print('Synthesis Net Built.')
+    opt.checkpoints_dir = checkpoints_dir
+    synthesis_net = Pix2PixModel(opt)
+    synthesis_net.eval()
+    print('Synthesis Net Restored')
+    return synthesis_net
+
+
+def get_dissimilarity(checkpoint_dir, ours=True):
+    # Get Dissimilarity Net
+    if ours:
+        config_diss = os.path.join(os.getcwd(), os.path.dirname(__file__),
+                                   'image_dissimilarity/configs/test/ours_configuration.yaml')
+    else:
+        config_diss = os.path.join(os.getcwd(), os.path.dirname(__file__),
+                                   'image_dissimilarity/configs/test/baseline_configuration.yaml')
+
+    with open(config_diss, 'r') as stream:
+        config_diss = yaml.load(stream, Loader=yaml.FullLoader)
+
+    prior = config_diss['model']['prior']
+    ensemble = config_diss['ensemble']
+
+    if prior:
+        diss_model = DissimNetPrior(**config_diss['model']).cuda()
+    else:
+        diss_model = DissimNet(**config_diss['model']).cuda()
+
+    print('Dissimilarity Net Built.')
+    save_folder = os.path.join(checkpoint_dir, config_diss['save_folder'])
+    model_path = os.path.join(save_folder, '%s_net_%s.pth' % (config_diss['which_epoch'], config_diss['experiment_name']))
+    model_weights = torch.load(model_path)
+    diss_model.load_state_dict(model_weights)
+    diss_model.eval()
+    print('Dissimilarity Net Restored')
+    return diss_model, prior, ensemble
+
+
+def get_synboost_transformations():
+    # Transform images to Tensor based on ImageNet Mean and STD
+    mean_std = ([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+    img_transform = Compose([ToTensor(), Normalize(*mean_std)])
+
+    # synthesis necessary pre-process
+    transform_semantic = Compose([Resize(size=(256, 512), interpolation=Image.NEAREST), ToTensor()])
+    transform_image_syn = Compose([Resize(size=(256, 512), interpolation=Image.BICUBIC), ToTensor(),
+                                   Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
+
+    # dissimilarity pre-process
+    vgg_diff = VGG19_difference().cuda()
+    base_transforms_diss = Compose([Resize(size=(256, 512), interpolation=Image.NEAREST), ToTensor()])
+    norm_transform_diss = Compose([Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225))])  # imageNet normalization
+
+    return img_transform, transform_semantic, transform_image_syn, vgg_diff, base_transforms_diss, norm_transform_diss

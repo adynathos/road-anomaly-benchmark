@@ -7,6 +7,7 @@ methods = {
     "Max_softmax": "WVFTc4ka37xASZV",
     "ODIN": "WVFTc4ka37xASZV",
     "Entropy_max": "kCgnr0LQuTbrArA",
+    "SynBoost": "0",
 }
 
 

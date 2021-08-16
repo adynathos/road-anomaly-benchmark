@@ -139,7 +139,7 @@ class DatasetObstacleTrack(DatasetRA):
 		dict(
 			# default: exclude special weather and night
 			name = 'ObstacleTrack-test',
-			scenes = SCENES_ALL.difference({'snowstorm1', 'snowstorm2', 'driveway'}),
+			scenes = SCENES_ALL.difference({'snowstorm1', 'snowstorm2', 'driveway', 'validation'}),
 			expected_length = 327,
 			**DEFAULTS,
 		),
@@ -147,7 +147,7 @@ class DatasetObstacleTrack(DatasetRA):
 			# all
 			name = 'ObstacleTrack-all',
 			scenes = SCENES_ALL,
-			expected_length = 412,
+			# expected_length = 452,
 			**DEFAULTS,
 		),
 		dict(
@@ -175,7 +175,19 @@ class DatasetObstacleTrack(DatasetRA):
 			# validation
 			name='ObstacleTrack-validation',
 			scenes={'validation'},
-			expected_length=40,
+			exclude_prefix={
+				'validation_19',
+				'validation_21',
+				'validation_22',
+				'validation_23',
+				'validation_24',
+				'validation_25',
+				'validation_26',
+				'validation_27',
+				'validation_28',
+				'validation_29',
+			},
+			expected_length=30,
 			**DEFAULTS,
 		),
 	]
@@ -199,8 +211,18 @@ class DatasetObstacleTrack(DatasetRA):
 			if fr.fid.split('_')[0] in self.cfg.scenes
 		]
 
-		super().set_frames(frames_filtered)
+		excluded_prefixes = self.cfg.get('exclude_prefix')
+		if excluded_prefixes is not None:
+			frlen = frames_filtered.__len__()
+			frames_filtered = [
+				fr for fr in frames_filtered
+				if not any([
+					fr.fid.startswith(p) for p in excluded_prefixes
+				])
+			]
+			print(f'Exclude {frlen} -> {frames_filtered.__len__()}')
 
+		super().set_frames(frames_filtered)
 
 @DatasetRegistry.register_class()
 class DatasetWeather(DatasetRA):
