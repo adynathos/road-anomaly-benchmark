@@ -287,12 +287,14 @@ class ErasingSubset(DatasetBase):
 			name = 'Erasing-20',
 			split = 'Erasing20',
 			expected_length = 105,
+			name_for_persistence = 'ObstacleTrack-test',
 		),
 		dict(
 			# from article "Detecting Road Obstacles By Erasing Them" 2020 version, without the dog
 			name = 'Erasing-20nodog',
 			split = 'Erasing20-no-dog',
 			expected_length = 100,
+			name_for_persistence = 'ObstacleTrack-test',
 		),
 
 		dict(
@@ -300,6 +302,7 @@ class ErasingSubset(DatasetBase):
 			name = 'Erasing-21',
 			split = 'Erasing21',
 			expected_length = 155,
+			name_for_persistence = 'ObstacleTrack-test',
 		),
 	]
 
