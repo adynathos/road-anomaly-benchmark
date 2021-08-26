@@ -46,8 +46,8 @@ def download_tar(url, save_dir):
     print("Download .tar and de-compress")
     if not os.path.exists(save_dir):
         os.makedirs(save_dir)
-    filename = wget.download(url, out=save_dir)
-    with tarfile.open(os.path.join(save_dir, filename), 'r') as tar_file:
+    filename = wget.download(url, out=str(save_dir))
+    with tarfile.open(Path(save_dir) / filename, 'r') as tar_file:
         tar_file.extractall(save_dir)
     return filename
 

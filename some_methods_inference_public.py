@@ -12,17 +12,17 @@ METHOD_KEYS = {
 }
 
 def name_list(name_list):
-	return [name for name in name_list.split(',') if name]
+    return [name for name in name_list.split(',') if name]
 
 @click.command()
 @click.option('--methods', default='ALL', help=f'Which methods to run, ALL or some of {list(METHOD_KEYS.keys())}')
 @click.option('--dsets', default='ObstacleTrack-validation', help='List of datasets to evaluate on, ex: ObstacleTrack-validation,LostAndFound-testNoKnown')
+
 def main(methods, dsets):
     if methods == 'ALL':
         methods = list(METHOD_KEYS.keys())
     else:
         methods = name_list(methods)
-
     dataset_names = name_list(dsets)
 
     for methodname in methods:
@@ -31,7 +31,7 @@ def main(methods, dsets):
         method = method_object(modelid)
 
         for dset in dataset_names:
-            print(f"-- Method {methodname} vs Dataset {dset} --")
+            print(f"-- Inference: Method {methodname} on Dataset {dset} --")
 
             ev = Evaluation(
                 method_name = methodname,
@@ -43,7 +43,7 @@ def main(methods, dsets):
             for frame in tqdm(ev.get_frames(), total=ev.__len__()):
                 result = method.anomaly_score(frame.image)
                 ev.save_output(frame, result)
-            
+
             ev.wait_to_finish_saving()
 
 

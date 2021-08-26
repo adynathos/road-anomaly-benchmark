@@ -1,9 +1,6 @@
 import os
 import random
 from pathlib import Path
-from .utils import download_checkpoint, download_zip, init_pytorch_DeepWV3Plus, get_softmax, get_calibrated_softmax, \
-    mahalanobis_modification, get_activations, load_gdrive_file
-import numpy as np
 import torch
 import h5py
 import numpy as np
@@ -59,7 +56,7 @@ class Mahalanobis:
         estimates_path = DIR_CHECKPOINTS / "cityscapes_train_estimates_global.h5"
         if not checkpoint_path.is_file() or not estimates_path.is_file():
             zip_download_url = os.path.join("https://uni-wuppertal.sciebo.de/s/", modelid, "download")
-            filename = download_zip(zip_download_url, load_dir)
+            filename = download_zip(zip_download_url, DIR_CHECKPOINTS)
             os.remove(filename)
         with h5py.File(estimates_path, "r") as data:
             self.arithmetic_means = np.array(data['means'])
@@ -147,12 +144,12 @@ class mindensity:
 class SynBoost:
     """Code from https://github.com/giandbt/synboost"""
     def __init__(self, seed=0):
-        checkpoints_dir = os.path.join(load_dir, "synboost_weights")
+        checkpoints_dir = os.path.join(DIR_CHECKPOINTS, "synboost_weights")
         if not os.path.exists(checkpoints_dir):
             pretrained_weights_url = os.path.join("http://robotics.ethz.ch/~asl-datasets/Dissimilarity/models.tar")
-            filename = download_tar(pretrained_weights_url, load_dir)
+            filename = download_tar(pretrained_weights_url, DIR_CHECKPOINTS)
             os.remove(filename)
-            os.rename(os.path.join(load_dir, "models"), os.path.join(load_dir, "synboost_weights"))
+            os.rename(os.path.join(DIR_CHECKPOINTS, "models"), os.path.join(DIR_CHECKPOINTS, "synboost_weights"))
 
         self.set_seeds(int(seed))
         # Common options for all models

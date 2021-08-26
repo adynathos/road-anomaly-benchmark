@@ -14,14 +14,27 @@
 		"SegEval-ObstacleTrack.fn_75": "Seg FN75",
 		"SegEval-ObstacleTrack.fp_75": "Seg FP75",
 		"SegEval-ObstacleTrack.f1_75": "Seg F1 75",
-		"SegEval-ObstacleTrack.f1_mean" : "Seg F1 mean"
+		"SegEval-ObstacleTrack.f1_mean" : "Seg F1 mean",
+		"SegEval-AnomalyTrack.sIoU_gt": "sIoU gt",
+		"SegEval-AnomalyTrack.sIoU_pred": "sIoU pred",
+		"SegEval-AnomalyTrack.fn_25": "Seg FN25",
+		"SegEval-AnomalyTrack.fp_25": "Seg FP25",
+		"SegEval-AnomalyTrack.f1_25": "Seg F1 25",
+		"SegEval-AnomalyTrack.fn_50": "Seg FN50",
+		"SegEval-AnomalyTrack.fp_50": "Seg FP50",
+		"SegEval-AnomalyTrack.f1_50": "Seg F1 50",
+		"SegEval-AnomalyTrack.fn_75": "Seg FN75",
+		"SegEval-AnomalyTrack.fp_75": "Seg FP75",
+		"SegEval-AnomalyTrack.f1_75": "Seg F1 75",
+		"SegEval-AnomalyTrack.f1_mean" : "Seg F1 mean"
 	},
 	"datasets": {
-		"ObstacleTrack-test": "Obstacle Track",
+		"ObstacleTrack-test": "Obstacle-Test",
 		"LostAndFound-testNoKnown": "LAF-testNK",
-		"RoadAnomalyTrack-test": "Anomaly Track",
+		"AnomalyTrack-test": "Anomaly-Test",
 		"FishyLAFAnomaly-val": "FishyLAF-val",
-		"ObstacleTrack-validation": "Val"
+		"ObstacleTrack-validation": "Obstacle-Val",
+		"AnomalyTrack-validation": "Anomaly-Val"
 	},
 	"methods": {
 		"ImgBlur05VsInp-ds2-NoiseImg": "Inpainting Discrepancy",
@@ -29,11 +42,11 @@
 		"Island": "Segmenter Island",
 		"Max_softmax": "Maximum Softmax",
 		"ODIN": "ODIN",
-		"dropout": "MC dropout",
+		"dropout": "MC Dropout",
 		"Entropy_max": "Maximized Entropy",
 		"Mahalanobis": "Mahalanobis",
 		"mindensity": "Embedding Density",
 		"SynBoost": "SynBoost",
-		"voidclassifier": "voidclassifier"
+		"voidclassifier": "Void Classifier"
 	}
 } 

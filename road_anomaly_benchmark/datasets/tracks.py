@@ -73,7 +73,7 @@ class DatasetAnomalyTrack(DatasetRA):
 
 	configs = [
 		dict(
-			name = 'AnomalyTrack-test',
+			name = 'AnomalyTrack-all',
 			dir_root = DIR_DATASETS / 'dataset_AnomalyTrack',
 			img_fmt = 'jpg',
 			classes = dict(
@@ -81,7 +81,7 @@ class DatasetAnomalyTrack(DatasetRA):
 				anomaly = 1,
 				ignore = 255,
 			),
-			expected_length = 100,
+			expected_length = 110,
 		),
 	]
 
