@@ -1,14 +1,10 @@
 
 ## Datasets
 
-* Fishyscapes - Lost & Found - anomalies
-* Fishyscapes - Lost & Found - obstacles
-* Fishyscapes - Web - anomalies
-
-* [Road Anomaly](doc/RoadAnomaly.md) - big anomalies, mostly animals, from ICCV2019 article
-* [Road Obstacles V1](https://arxiv.org/abs/2012.13633) - road scenes with obstacles, on diverse road surfaces.
-* [Road Obstacles V2](doc/RoadObstaclesV2.md) - additional recordings of obstacles, in difficult weather and at night.
-
+* [RoadAnomaly21](https://uni-wuppertal.sciebo.de/s/TVR7VxukVrV7fUH/download)
+* [RoadObstacle21](https://uni-wuppertal.sciebo.de/s/wQQq2saipS339QA/download)
+* [Fishyscapes LostAndFound](https://fishyscapes.com/) - Anomalies
+* [LostAndFound](http://www.6d-vision.com/lostandfounddataset) - Obstacles
 
 ## Evaluation procedure
 
@@ -58,51 +54,52 @@ def main():
 ```
 
 The files will be stored in `./outputs/anomaly_p/...`. The storage directory can be overriden with env var `DIR_OUTPUTS`.
+There are also some methods already implemented and available in `some_methods_inference_public.py`. 
 
 ### Metrics
 
 This step will also create plots in `./outputs/{metric}`
 
-* Metrics for anomaly track, splits *AnomalyTrack-test, FishyLAFAnomaly-val*
+* Metrics for anomaly track, splits *AnomalyTrack-validation, FishyLAFAnomaly-val*
 
 ```bash
 methods=Method1,Method2
 
-python -m road_anomaly_benchmark metric PixBinaryClass $methods AnomalyTrack-test,FishyLAFAnomaly-val
-python -m road_anomaly_benchmark metric SegEval-AnomalyTrack $methods AnomalyTrack-test,FishyLAFAnomaly-val
+python -m road_anomaly_benchmark metric PixBinaryClass $methods AnomalyTrack-validation,FishyLAFAnomaly-val
+python -m road_anomaly_benchmark metric SegEval-AnomalyTrack $methods AnomalyTrack-validation,FishyLAFAnomaly-val
 ```
 
-* Metrics for obstacle track, splits: *ObstacleTrack-test, LostAndFound-testNoKnown*
+* Metrics for obstacle track, splits *ObstacleTrack-validation, LostAndFound-testNoKnown*
 
 ```bash
 methods=Method1,Method2
 
-python -m road_anomaly_benchmark metric PixBinaryClass $methods ObstacleTrack-test,LostAndFound-testNoKnown
-python -m road_anomaly_benchmark metric SegEval-ObstacleTrack $methods ObstacleTrack-test,LostAndFound-testNoKnown
+python -m road_anomaly_benchmark metric PixBinaryClass $methods ObstacleTrack-validation,LostAndFound-testNoKnown
+python -m road_anomaly_benchmark metric SegEval-ObstacleTrack $methods ObstacleTrack-validation,LostAndFound-testNoKnown
 ```
 
-* Upload the metric files from `./outputs/{metric_name}` to `outputs/{metric_name}` in the network disk.
+Use `--frame-vis` option to visualize anomaly scores (requires ground truth).
 
-### Plots and tables
+### Plots and Tables
 
 ```bash
 python -m road_anomaly_benchmark comparison MyComparison metric1,metric2 method1,method2 dset1,dset2
 ```
 
-* Anomaly splits: *RoadAnomalyTrack-test, FishyLAFAnomaly-val*
+* Anomaly splits: *AnomalyTrack-validation, FishyLAFAnomaly-val*
 
 ```bash
 # Anomaly tables
-python -m road_anomaly_benchmark comparison TableAnomaly1 PixBinaryClass,SegEval-AnomalyTrack $methods_ano RoadAnomalyTrack-test --names names.json
+python -m road_anomaly_benchmark comparison TableAnomaly1 PixBinaryClass,SegEval-AnomalyTrack $methods_ano AnomalyTrack-validation --names names.json
 python -m road_anomaly_benchmark comparison TableAnomaly2 PixBinaryClass,SegEval-AnomalyTrack $methods_ano FishyLAFAnomaly-val --names names.json
 ```
 
-* Obstacle splits: *ObstacleTrack-test, LostAndFound-testNoKnown*
+* Obstacle splits: *ObstacleTrack-validation, LostAndFound-testNoKnown*
 
 ```bash
 # Obstacle tables
-python -m road_anomaly_benchmark comparison TableObstacle1 PixBinaryClass,SegEval-ObstacleTrack $methods_obs ObstacleTrack-test  --names names.json
-python -m road_anomaly_benchmark comparison TableObstacle2 PixBinaryClass,SegEval-ObstacleTrack $methods_obs LostAndFound-testNoKnown  --names names.json
+python -m road_anomaly_benchmark comparison TableObstacle1 PixBinaryClass,SegEval-ObstacleTrack $methods_obs ObstacleTrack-validation --names names.json
+python -m road_anomaly_benchmark comparison TableObstacle2 PixBinaryClass,SegEval-ObstacleTrack $methods_obs LostAndFound-testNoKnown --names names.json
 ```
 
 ## Splits
