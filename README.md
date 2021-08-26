@@ -16,12 +16,12 @@
 
 * Place the datasets in `./datasets` (or override with env var `DIR_DATASETS`)
 	* `dataset_ObstacleTrack`
-	* `dataset_RoadAnomalyTrack`
+	* `dataset_AnomalyTrack`
 	* `dataset_LostAndFound` (or provide location in env `DSET_LAF`)
 	* `dataset_FishyLAF` (or provide location in env `DSET_FISHY_LAF`)
 
 * Run inference and store results in files. Run inference for the following splits, as the other splits are subsets of those:
-	* `AnomalyTrack-test`
+	* `AnomalyTrack-all`
 	* `ObstacleTrack-all`
 	* `LostAndFound-test`
 	* `LostAndFound-train`

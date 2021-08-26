@@ -107,7 +107,7 @@ class DatasetObstacleTrack(DatasetRA):
 		dir_root = DIR_DATASETS / 'dataset_ObstacleTrack',
 		img_fmt = 'webp',
 		classes = CLASS_IDS,
-		name_for_persistence = 'ObstacleTrack-test',
+		name_for_persistence = 'ObstacleTrack-all',
 	)
 
 	SCENES_ALL = {

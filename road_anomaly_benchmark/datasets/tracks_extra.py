@@ -532,7 +532,7 @@ class RoadAnomalyByClass(DatasetRA):
 			img_fmt = 'jpg',
 			split = 'vehicles',
 			dir_root = DIR_DATASETS / 'dataset_AnomalyTrack',
-			expected_length = 22,
+			expected_length = 23,
 			classes = dict(
 				usual = 0,
 				anomaly = 1,
@@ -544,11 +544,23 @@ class RoadAnomalyByClass(DatasetRA):
 			img_fmt = 'jpg',
 			split = 'other',
 			dir_root = DIR_DATASETS / 'dataset_AnomalyTrack',
-			expected_length = 12,
+			expected_length = 11,
 			classes = dict(
 				usual = 0,
 				anomaly = 1,
 				ignore = 255,
+			),
+		),
+		dict(
+			name='AnomalyTrack-validation',
+			img_fmt='jpg',
+			split='validation',
+			dir_root=DIR_DATASETS / 'dataset_AnomalyTrack',
+			expected_length=10,
+			classes=dict(
+				usual=0,
+				anomaly=1,
+				ignore=255,
 			),
 		),
 		dict(
@@ -649,6 +661,7 @@ class RoadAnomalyByClass(DatasetRA):
 			'caravan0006',
 			'caravan0007',
 			'carriage0001',  # only carriage where horse is not visible
+			'scooter0000',
 			'tractor0000',
 			'tractor0001',
 			'tractor0002',
@@ -668,7 +681,6 @@ class RoadAnomalyByClass(DatasetRA):
 			'hay0000',
 			'piano0000',
 			'tent0000',
-			'toy_car0000',
 		],
 		'validation': [
 			'validation0000',
