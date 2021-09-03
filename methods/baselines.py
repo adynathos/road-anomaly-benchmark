@@ -8,14 +8,13 @@ import tensorflow as tf
 import torch.nn.functional as F
 
 from PIL import Image
-from scipy.stats import entropy
 
 from .image_dissimilarity.data.cityscapes_dataset import one_hot_encoding
 from .image_segmentation.datasets.cityscapes_labels import label2trainid
 from .options.config_class import Config
 from .utils import download_checkpoint, download_zip, init_pytorch_DeepWV3Plus, get_softmax, get_calibrated_softmax, \
     mahalanobis_modification, get_activations, load_gdrive_file, download_tar, get_segmentation, get_synthesis, \
-    get_dissimilarity, get_synboost_transformations
+    get_dissimilarity, get_synboost_transformations, get_entropy
 
 
 DIR_CHECKPOINTS = Path(os.environ.get('DIR_SEGMENTME_BASELINES', "/tmp/checkpoints/"))
@@ -92,8 +91,7 @@ class Entropy_max:
         self.model = init_pytorch_DeepWV3Plus(checkpoint_path)
 
     def anomaly_score(self, image):
-        probs = get_softmax(self.model, image)
-        return entropy(probs, axis=0) / np.log(probs.shape[0]).astype("float32")
+        return get_entropy(self.model, image)
 
 
 class voidclassifier:

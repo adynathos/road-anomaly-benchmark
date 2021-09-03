@@ -1,5 +1,4 @@
 from pathlib import Path
-from zipfile import ZipFile
 import os
 
 import torch
@@ -83,6 +82,13 @@ def get_softmax(network, image, transform=None, as_numpy=True):
         probs = probs.data.cpu().numpy()[0].astype("float32")
     return probs
 
+
+def get_entropy(network, image, transform=None, as_numpy=True):
+    probs = get_softmax(network, image, transform, as_numpy=False)
+    entropy = torch.div(torch.sum(-probs * torch.log(probs), dim=1), torch.log(torch.tensor(probs.shape[1])))
+    if as_numpy:
+        entropy = entropy.data.cpu().numpy()[0].astype("float32")
+    return entropy
 
 def get_calibrated_softmax(network, image, magnitude, temperature, transform=None, as_numpy=False):
     if transform is None:
