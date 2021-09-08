@@ -13,8 +13,8 @@
 * Place the datasets in `./datasets` (or override with env var `DIR_DATASETS`)
 	* `dataset_ObstacleTrack`
 	* `dataset_AnomalyTrack`
-	* `dataset_LostAndFound` (or provide location in env `DSET_LAF`)
-	* `dataset_FishyLAF` (or provide location in env `DSET_FISHY_LAF`)
+	* `dataset_LostAndFound` (or provide location in env `DIR_LAF`)
+	* `dataset_FishyLAF` (or provide location in env `DIR_FISHY_LAF`)
 
 * Run inference and store results in files. Run inference for the following splits, as the other splits are subsets of those:
 	* `AnomalyTrack-all`
@@ -102,37 +102,14 @@ python -m road_anomaly_benchmark comparison TableObstacle1 PixBinaryClass,SegEva
 python -m road_anomaly_benchmark comparison TableObstacle2 PixBinaryClass,SegEval-ObstacleTrack $methods_obs LostAndFound-testNoKnown --names names.json
 ```
 
-## Splits
+## Citation
+If you use this repository, please consider citing our [paper](https://arxiv.org/abs/2104.14812):
 
-### Obstacle scene splits
-
-Scene loaders:
-
-* ObstacleScene-curvy - cracked road, surrounded by snow
-* ObstacleScene-gravel - gravel road, no snow
-* ObstacleScene-greyasphalt - grey roads, in village and in forest
-* ObstacleScene-motorway - motorway with side railings
-* ObstacleScene-shiny - sun reflects off wet road
-* ObstacleScene-paving - road made of bricks
-* ObstacleScene-darkasphaltAll - asphalt after rain, with some autumn leaves, combines 2 locations (below)
-* ObstacleScene-darkasphalt - asphalt after rain, with some autumn leaves, dog sequence excluded
-* ObstacleScene-darkasphaltDog - asphalt after rain, with some autumn leaves, dog sequence only
-* ObstacleScene-night - evening or night illuminated with car lamps
-* ObstacleScene-snowstorm - snow falling, camera lens may be dirty
-
-These splits re-use outputs inferred for the `ObstacleTrack-all` loader. Calculating metrics:
-
-```bash
-ds_scenes=ObstacleScene-curvy,ObstacleScene-darkasphalt,ObstacleScene-darkasphaltDog,ObstacleScene-darkasphaltAll,ObstacleScene-gravel,ObstacleScene-greyasphalt,ObstacleScene-motorway,ObstacleScene-shiny,ObstacleScene-paving,ObstacleScene-night,ObstacleScene-snowstorm
-
-python -m road_anomaly_benchmark metric PixBinaryClass $methods $ds_scenes
-python -m road_anomaly_benchmark metric SegEval-ObstacleTrack $methods $ds_scenes
-
-python -m road_anomaly_benchmark comparison TableObstacleScenes PixBinaryClass,SegEval-ObstacleTrack $ds_scenes   --names names.json
-```
-
-## Implementing a metric
-
-A metric should implement the `EvaluationMetric` interface from ([road_anomaly_benchmark/metrics/base.py](road_anomaly_benchmark/metrics/base.py).
-See `MetricPixelClassification` from [road_anomaly_benchmark/metrics/pixel_classification.py](road_anomaly_benchmark/metrics/pixel_classification.py).
-
+	@misc{segmentmeifyoucan2021,
+		  title={SegmentMeIfYouCan: A Benchmark for Anomaly Segmentation}, 
+		  author={Robin Chan and Krzysztof Lis and Svenja Uhlemeyer and Hermann Blum and Sina Honari and Roland Siegwart and Pascal Fua and Mathieu Salzmann and Matthias Rottmann},
+		  year={2021},
+		  eprint={2104.14812},
+		  archivePrefix={arXiv},
+		  primaryClass={cs.CV}
+	}
