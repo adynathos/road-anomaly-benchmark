@@ -6,7 +6,6 @@ from pathlib import Path
 
 import click
 import numpy as np
-from pandas import DataFrame, Series
 
 from .paths import DIR_OUTPUTS
 from .evaluation import Evaluation
@@ -62,6 +61,7 @@ def metric(method_names, metric_names, dataset_names, limit_length, parallel, fr
 @click.option('--order-by', type=str, default=None)
 @click.option('--names', type=click.Path(exists=True, file_okay=True, dir_okay=False))
 def comparison(comparison_name, method_names, metric_names, dataset_names, order_by=None, names=None, plot_formats=None):
+	from pandas import DataFrame, Series
 
 	method_names = name_list(method_names)
 	metric_names = name_list(metric_names)
@@ -123,7 +123,6 @@ def comparison(comparison_name, method_names, metric_names, dataset_names, order
 						mn = rename_methods.get(method, method)
 
 						get_col(colname)[mn] = v
-
 
 	table = DataFrame(data = columns)
 
