@@ -138,8 +138,9 @@ class Evaluation:
 
 			dset = DatasetRegistry.get(dataset_name)
 			metric = MetricRegistry.get(metric_name)
-			
-			metric.init(method_name, dataset_name)
+
+			if default_instancer:
+				metric.init(method_name, dataset_name)
 
 			fr = dset[frame_idx]
 			frame = {"method_name": method_name, "dset_name": fr.dset_name, "fid": fr.fid}

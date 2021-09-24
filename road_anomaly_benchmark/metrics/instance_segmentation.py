@@ -7,7 +7,6 @@ import os
 from easydict import EasyDict
 from scipy.ndimage.measurements import label
 from pathlib import Path
-from PIL import Image
 
 from .base import EvaluationMetric, MetricRegistry
 from ..evaluation import DIR_OUTPUTS
@@ -42,7 +41,6 @@ def default_instancer(anomaly_p: np.ndarray, label_pixel_gt: np.ndarray, thresh_
             if len(anomaly_seg_pred[labeled_mask == comp]) < minimum_cc_sum:
                 anomaly_seg_pred[labeled_mask == comp] = 0
     labeled_mask = np.copy(anomaly_instances)
-
     label_pixel_gt = label_pixel_gt.copy() # copy for editing
     for comp in range(n_anomaly + 1):
         if len(anomaly_instances[labeled_mask == comp]) < thresh_instsize:
@@ -50,8 +48,11 @@ def default_instancer(anomaly_p: np.ndarray, label_pixel_gt: np.ndarray, thresh_
 
     """restrict to region of interest"""
     mask_roi = label_pixel_gt < 255
+    segmentation_filtered = np.copy(anomaly_seg_pred).astype("uint8")
+    segmentation_filtered[anomaly_seg_pred>0] = 1
+    segmentation_filtered[mask_roi==255] = 0
 
-    return anomaly_instances[mask_roi], anomaly_seg_pred[mask_roi]
+    return anomaly_instances[mask_roi], anomaly_seg_pred[mask_roi], segmentation_filtered
 
 
 def anomaly_instances_from_mask(segmentation: np.ndarray, label_pixel_gt: np.ndarray, thresh_instsize: int = 0):
@@ -85,7 +86,9 @@ def save_anomaly_mask(anomaly_p: np.ndarray, thresh_p: float, save_path: str):
     segmentation[anomaly_p > thresh_p] = 1
     segmentation[anomaly_p <= thresh_p] = 0
 
-    Image.fromarray(segmentation.astype('uint8')).save(save_path)
+    # Image.fromarray(segmentation.astype('uint8')).save(save_path)
+    imwrite(save_path, segmentation.astype('uint8'))
+    print("Saved:", save_path)
 
 
 def segment_metrics(anomaly_instances, anomaly_seg_pred, iou_thresholds=np.linspace(0.25, 0.75, 11, endpoint=True)):
@@ -117,6 +120,7 @@ def segment_metrics(anomaly_instances, anomaly_seg_pred, iou_thresholds=np.linsp
     """Loop over prediction instances"""
     sIoU_pred = []
     size_pred = []
+    prec_pred = []
     for i in np.unique(anomaly_seg_pred[anomaly_seg_pred>0]):
         tp_loc = anomaly_instances[anomaly_seg_pred == i]
         seg_ind = np.unique(tp_loc[tp_loc != 0])
@@ -127,18 +131,21 @@ def segment_metrics(anomaly_instances, anomaly_seg_pred, iou_thresholds=np.linsp
             anomaly_seg_pred == i) - intersection - adjustment
         sIoU_pred.append(intersection / adjusted_union)
         size_pred.append(np.sum(anomaly_seg_pred == i))
+        prec_pred.append(intersection / np.sum(anomaly_seg_pred == i))
 
     sIoU_gt = np.array(sIoU_gt)
     sIoU_pred = np.array(sIoU_pred)
     size_gt = np.array((size_gt))
     size_pred = np.array(size_pred)
+    prec_pred = np.array(prec_pred)
 
     """create results dictionary"""
-    results = EasyDict(sIoU_gt=sIoU_gt, sIoU_pred=sIoU_pred, size_gt=size_gt, size_pred=size_pred)
+    results = EasyDict(sIoU_gt=sIoU_gt, sIoU_pred=sIoU_pred, size_gt=size_gt, size_pred=size_pred, prec_pred=prec_pred)
     for t in iou_thresholds:
         results["tp_" + str(int(t*100))] = np.count_nonzero(sIoU_gt >= t)
         results["fn_" + str(int(t*100))] = np.count_nonzero(sIoU_gt < t)
-        results["fp_" + str(int(t*100))] = np.count_nonzero(sIoU_pred < t)
+        # results["fp_" + str(int(t*100))] = np.count_nonzero(sIoU_pred < t)
+        results["fp_" + str(int(t*100))] = np.count_nonzero(prec_pred < t)
 
     return results
 
@@ -170,6 +177,7 @@ class ResultsInfo:
 
     sIoU_gt : float
     sIoU_pred : float
+    prec_pred : float
 
     def __iter__(self):
         return dataclasses.asdict(self).items()
@@ -236,8 +244,9 @@ class MetricSegment(EvaluationMetric):
         """
 
         if self.cfg.default_instancer:
-            anomaly_gt, anomaly_pred = default_instancer(anomaly_p, label_pixel_gt, self.cfg.thresh_p,
-                                                         self.cfg.thresh_segsize, self.cfg.thresh_instsize)
+            anomaly_gt, anomaly_pred, mask = default_instancer(anomaly_p, label_pixel_gt, self.cfg.thresh_p,
+                                                               self.cfg.thresh_segsize, self.cfg.thresh_instsize)
+            # imwrite(_["mask_path"], mask)
         else:
             anomaly_mask = imread(_["mask_path"])
             anomaly_gt, anomaly_pred = anomaly_instances_from_mask(anomaly_mask, label_pixel_gt, self.cfg.thresh_instsize)
@@ -255,10 +264,12 @@ class MetricSegment(EvaluationMetric):
 
         sIoU_gt_mean = sum(np.sum(r.sIoU_gt) for r in frame_results) / sum(len(r.sIoU_gt) for r in frame_results)
         sIoU_pred_mean = sum(np.sum(r.sIoU_pred) for r in frame_results) / sum(len(r.sIoU_pred) for r in frame_results)
+        prec_pred_mean = sum(np.sum(r.prec_pred) for r in frame_results) / sum(len(r.prec_pred) for r in frame_results)
         ag_results = {"tp_mean" : 0., "fn_mean" : 0., "fp_mean" : 0., "f1_mean" : 0.,
-                      "sIoU_gt" : sIoU_gt_mean, "sIoU_pred" : sIoU_pred_mean}
+                      "sIoU_gt" : sIoU_gt_mean, "sIoU_pred" : sIoU_pred_mean, "prec_pred": prec_pred_mean}
         print("Mean sIoU GT   :", sIoU_gt_mean)
         print("Mean sIoU PRED :", sIoU_pred_mean)
+        print("Mean Precision PRED :", prec_pred_mean)
         for t in self.cfg.thresh_sIoU:
             tp = sum(r["tp_" + str(int(t*100))] for r in frame_results)
             fn = sum(r["fn_" + str(int(t*100))] for r in frame_results)
@@ -294,7 +305,6 @@ class MetricSegment(EvaluationMetric):
             dataset_name=dataset_name,
             **ag_results,
         )
-
         return seg_info
 
     def persistence_path_data(self, method_name, dataset_name):
