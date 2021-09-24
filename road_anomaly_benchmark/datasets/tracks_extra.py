@@ -204,8 +204,8 @@ class FishyscapesLAFSubset(DatasetBase):
 
 	def get_frame(self, idx_or_fid, *channels):
 		if isinstance(idx_or_fid, str): # by fid
-			if idx_or_fid not in FRAME_IDS_SETS:
-				raise KeyError('Id {idx_or_fid} is not in this dataset')
+			if idx_or_fid not in self.fids:
+				raise KeyError(f'Id {idx_or_fid} is not in this dataset {self}')
 			else:
 				fid = idx_or_fid
 		else:
@@ -287,12 +287,14 @@ class ErasingSubset(DatasetBase):
 			name = 'Erasing-20',
 			split = 'Erasing20',
 			expected_length = 105,
+			name_for_persistence = 'ObstacleTrack-all',
 		),
 		dict(
 			# from article "Detecting Road Obstacles By Erasing Them" 2020 version, without the dog
 			name = 'Erasing-20nodog',
 			split = 'Erasing20-no-dog',
 			expected_length = 100,
+			name_for_persistence = 'ObstacleTrack-all',
 		),
 
 		dict(
@@ -300,6 +302,7 @@ class ErasingSubset(DatasetBase):
 			name = 'Erasing-21',
 			split = 'Erasing21',
 			expected_length = 155,
+			name_for_persistence = 'ObstacleTrack-all',
 		),
 	]
 
@@ -499,8 +502,8 @@ class ErasingSubset(DatasetBase):
 
 	def get_frame(self, idx_or_fid, *channels):
 		if isinstance(idx_or_fid, str): # by fid
-			if idx_or_fid not in FRAME_IDS_SETS:
-				raise KeyError('Id {idx_or_fid} is not in this dataset')
+			if idx_or_fid not in self.fids:
+				raise KeyError(f'Id {idx_or_fid} is not in this dataset {self}')
 			else:
 				fid = idx_or_fid
 		else:
@@ -820,8 +823,8 @@ class RoadAnomalyByClass(DatasetRA):
 
 	def get_frame(self, idx_or_fid, *channels):
 		if isinstance(idx_or_fid, str): # by fid
-			if idx_or_fid not in FRAME_IDS_SETS:
-				raise KeyError('Id {idx_or_fid} is not in this dataset')
+			if idx_or_fid not in self.fids:
+				raise KeyError('Id {idx_or_fid} is not in this dataset {self}')
 			else:
 				fid = idx_or_fid
 		else:
