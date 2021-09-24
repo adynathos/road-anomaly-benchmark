@@ -26,7 +26,8 @@ def main():
 @click.option('--limit-length', type=int, default=0)
 @click.option('--parallel/--no-parallel', default=True)
 @click.option('--frame-vis/--no-frame-vis', default=False)
-def metric(method_names, metric_names, dataset_names, limit_length, parallel, frame_vis):
+@click.option('--default-instancer/--own-instancer', default=True)
+def metric(method_names, metric_names, dataset_names, limit_length, parallel, frame_vis, default_instancer):
 
 	method_names = name_list(method_names)
 	metric_names = name_list(metric_names)
@@ -51,6 +52,7 @@ def metric(method_names, metric_names, dataset_names, limit_length, parallel, fr
 					parallel = parallel,
 					show_plot = False,
 					frame_vis = frame_vis,
+					default_instancer = default_instancer,
 				)
 
 

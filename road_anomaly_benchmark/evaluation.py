@@ -31,6 +31,7 @@ class Evaluation:
 			str(DIR_OUTPUTS / "anomaly_p/{method_name}/{dset_name}/{fid}.hdf5"),
 			compression = 9,
 		),
+		'anomaly_mask_path': str(DIR_OUTPUTS / "anomaly_masks/{method_name}/{dset_name}/{fid}.png")
 	}
 
 	threads = None
@@ -78,13 +79,14 @@ class Evaluation:
 		# self.channels['anomaly_p'].write(value, method_name = self.method_name, **frame)
 	
 
-	def run_metric_single(self, metric_name, sample=None, frame_vis=False):
+	def run_metric_single(self, metric_name, sample=None, frame_vis=False, default_instancer=True):
 		# TODO sample is part of evaluation
 
 		metric = MetricRegistry.get(metric_name)
 		try:
 			if "Seg" in metric_name:
-				if metric.cfg.thresh_p is None:
+				metric.cfg.default_instancer = default_instancer
+				if metric.cfg.thresh_p is None and default_instancer:
 					metric.get_thresh_p_from_curve(self.method_name, self.dataset_name)
 		except AttributeError:
 			print("Perform 'PixBinaryClass' first")
@@ -103,13 +105,21 @@ class Evaluation:
 			fr_iterable_len = fr_iterable.__len__()
 
 		for fr in tqdm(fr_iterable, total=fr_iterable_len):
-			fr_result = metric.process_frame(
+			frame = {"method_name": self.method_name, "dset_name": fr.dset_name, "fid": fr.fid}
+			fr["mask_path"] = self.channels['anomaly_mask_path'].format(**frame)
+
+			if metric.cfg.default_instancer:
 				anomaly_p = self.channels['anomaly_p'].read(
-					method_name = self.method_name, 
-					dset_name = fr.dset_name,
-					fid = fr.fid,
-				),
-				method_name = self.method_name, 
+						method_name = self.method_name,
+						dset_name = fr.dset_name,
+						fid = fr.fid,
+					)
+			else:
+				anomaly_p = None
+
+			fr_result = metric.process_frame(
+				anomaly_p = anomaly_p,
+				method_name = self.method_name,
 				visualize = frame_vis,
 				**fr,
 			)
@@ -122,7 +132,7 @@ class Evaluation:
 		)
 
 	@classmethod
-	def metric_worker(cls, method_name, metric_name, frame_vis, dataset_name_and_frame_idx):
+	def metric_worker(cls, method_name, metric_name, frame_vis, default_instancer, dataset_name_and_frame_idx):
 		try:
 			dataset_name, frame_idx = dataset_name_and_frame_idx
 
@@ -132,15 +142,20 @@ class Evaluation:
 			metric.init(method_name, dataset_name)
 
 			fr = dset[frame_idx]
+			frame = {"method_name": method_name, "dset_name": fr.dset_name, "fid": fr.fid}
+			fr["mask_path"] = cls.channels['anomaly_mask_path'].format(**frame)
 
-			heatmap = cls.channels['anomaly_p'].read(
-				method_name = method_name, 
-				dset_name = fr.dset_name,
-				fid = fr.fid,
-			)
-
-			if heatmap.shape[1] < fr.image.shape[1]:
-				heatmap = cv.resize(heatmap.astype(np.float32), fr.image.shape[:2][::-1], interpolation=cv.INTER_LINEAR)
+			if default_instancer:
+				heatmap = cls.channels['anomaly_p'].read(
+					method_name=method_name,
+					dset_name=fr.dset_name,
+					fid=fr.fid,
+				)
+				if heatmap.shape[1] < fr.image.shape[1]:
+					heatmap = cv.resize(heatmap.astype(np.float32), fr.image.shape[:2][::-1],
+										interpolation=cv.INTER_LINEAR)
+			else:
+				heatmap = None
 
 			result = metric.process_frame(
 				anomaly_p = heatmap,
@@ -155,17 +170,18 @@ class Evaluation:
 			raise e
 
 
-	def run_metric_parallel(self, metric_name, sample=None, frame_vis=False):
+	def run_metric_parallel(self, metric_name, sample=None, frame_vis=False, default_instancer=True):
 
 		metric = MetricRegistry.get(metric_name)
 		try:
 			if "Seg" in metric_name:
-				if metric.cfg.thresh_p is None:
+				metric.cfg.default_instancer = default_instancer
+				if metric.cfg.thresh_p is None and default_instancer:
 					metric.get_thresh_p_from_curve(self.method_name, self.dataset_name)
 		except AttributeError:
 			print("Perform 'PixBinaryClass' first")
 			exit()
-		
+
 		if sample is not None:
 			dset_name, frame_indices = sample
 		else:
@@ -179,7 +195,7 @@ class Evaluation:
 
 		with multiprocessing.Pool() as pool:
 			it = pool.imap_unordered(
-				partial(self.metric_worker, self.method_name, metric_name, frame_vis),
+				partial(self.metric_worker, self.method_name, metric_name, frame_vis, default_instancer),
 				tasks,
 				chunksize = 4,
 			)
@@ -195,14 +211,15 @@ class Evaluation:
 		return ag
 	
 
-	def calculate_metric_from_saved_outputs(self, metric_name, sample=None, parallel=True, show_plot=False, frame_vis=False):
+	def calculate_metric_from_saved_outputs(self, metric_name, sample=None, parallel=True, show_plot=False,
+											frame_vis=False, default_instancer=True):
 
 		metric = MetricRegistry.get(metric_name)
 
 		if parallel:
-			ag = self.run_metric_parallel(metric_name, sample=sample, frame_vis=frame_vis)
+			ag = self.run_metric_parallel(metric_name, sample, frame_vis, default_instancer)
 		else:
-			ag = self.run_metric_single(metric_name, sample=sample, frame_vis=frame_vis)
+			ag = self.run_metric_single(metric_name, sample, frame_vis, default_instancer)
 
 		dset_name = sample[0] if sample is not None else self.dataset_name
 

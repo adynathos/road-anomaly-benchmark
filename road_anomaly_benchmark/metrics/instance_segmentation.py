@@ -2,15 +2,17 @@
 import dataclasses
 
 import numpy as np
+import os
 
 from easydict import EasyDict
 from scipy.ndimage.measurements import label
 from pathlib import Path
+from PIL import Image
 
 from .base import EvaluationMetric, MetricRegistry
 from ..evaluation import DIR_OUTPUTS
 from ..datasets.dataset_io import hdf5_write_hierarchy_to_file, hdf5_read_hierarchy_from_file
-from ..jupyter_show_image import adapt_img_data, imwrite
+from ..jupyter_show_image import adapt_img_data, imwrite, imread
 
 
 def default_instancer(anomaly_p: np.ndarray, label_pixel_gt: np.ndarray, thresh_p: float,
@@ -32,7 +34,7 @@ def default_instancer(anomaly_p: np.ndarray, label_pixel_gt: np.ndarray, thresh_
     anomaly_instances, n_anomaly = label(anomaly_gt, structure)
     anomaly_seg_pred, n_seg_pred = label(anomaly_pred, structure)
 
-    """remove connected compontents below size threshold"""
+    """remove connected components below size threshold"""
     if thresh_segsize is not None:
         minimum_cc_sum  = thresh_segsize
         labeled_mask = np.copy(anomaly_seg_pred)
@@ -46,8 +48,44 @@ def default_instancer(anomaly_p: np.ndarray, label_pixel_gt: np.ndarray, thresh_
         if len(anomaly_instances[labeled_mask == comp]) < thresh_instsize:
             label_pixel_gt[labeled_mask == comp] = 255
 
+    """restrict to region of interest"""
+    mask_roi = label_pixel_gt < 255
+
+    return anomaly_instances[mask_roi], anomaly_seg_pred[mask_roi]
+
+
+def anomaly_instances_from_mask(segmentation: np.ndarray, label_pixel_gt: np.ndarray, thresh_instsize: int = 0):
+    anomaly_gt = np.zeros(label_pixel_gt.shape)
+    anomaly_gt[label_pixel_gt == 1] = 1
+    anomaly_pred = np.zeros(label_pixel_gt.shape)
+    anomaly_pred[segmentation == 1] = 1
+    anomaly_pred[label_pixel_gt == 255] = 0
+
+    """connected components"""
+    structure = np.ones((3, 3), dtype=np.int)
+    anomaly_instances, n_anomaly = label(anomaly_gt, structure)
+    anomaly_seg_pred, n_seg_pred = label(anomaly_pred, structure)
+
+    """remove ground truth connected components below size threshold"""
+    labeled_mask = np.copy(anomaly_instances)
+    label_pixel_gt = label_pixel_gt.copy() # copy for editing
+    for comp in range(n_anomaly + 1):
+        if len(anomaly_instances[labeled_mask == comp]) < thresh_instsize:
+            label_pixel_gt[labeled_mask == comp] = 255
+
+    """restrict to region of interest"""
     mask_roi = label_pixel_gt < 255
     return anomaly_instances[mask_roi], anomaly_seg_pred[mask_roi]
+
+
+def save_anomaly_mask(anomaly_p: np.ndarray, thresh_p: float, save_path: str):
+
+    """segmentation from pixel-wise anomaly scores"""
+    segmentation = np.copy(anomaly_p)
+    segmentation[anomaly_p > thresh_p] = 1
+    segmentation[anomaly_p <= thresh_p] = 0
+
+    Image.fromarray(segmentation.astype('uint8')).save(save_path)
 
 
 def segment_metrics(anomaly_instances, anomaly_seg_pred, iou_thresholds=np.linspace(0.25, 0.75, 11, endpoint=True)):
@@ -192,17 +230,21 @@ class MetricSegment(EvaluationMetric):
             1 = anomaly / obstacle
             255 = void / ignore
         @param anomaly_p: HxW float16
-            heatmap of per-pixel anomaly detection, value from 0 to 1
+            heatmap of per-pixel anomaly detection, higher values correspond to anomaly / obstacle class
         @param visualize: bool
             saves an image with segment predictions
         """
 
-        mask_roi = label_pixel_gt < 255
-        anomaly_gt, anomaly_pred = default_instancer(anomaly_p, label_pixel_gt, self.cfg.thresh_p,
-                                                     self.cfg.thresh_segsize, self.cfg.thresh_instsize)
+        if self.cfg.default_instancer:
+            anomaly_gt, anomaly_pred = default_instancer(anomaly_p, label_pixel_gt, self.cfg.thresh_p,
+                                                         self.cfg.thresh_segsize, self.cfg.thresh_instsize)
+        else:
+            anomaly_mask = imread(_["mask_path"])
+            anomaly_gt, anomaly_pred = anomaly_instances_from_mask(anomaly_mask, label_pixel_gt, self.cfg.thresh_instsize)
 
         results = segment_metrics(anomaly_gt, anomaly_pred, self.cfg.thresh_sIoU)
 
+        mask_roi = label_pixel_gt < 255
         if visualize and fid is not None and dset_name is not None and method_name is not None:
             self.vis_frame(fid=fid, dset_name=dset_name, method_name=method_name, mask_roi=mask_roi,
                            anomaly_p=anomaly_p, **_)
