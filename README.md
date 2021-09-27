@@ -78,7 +78,15 @@ python -m road_anomaly_benchmark metric PixBinaryClass $methods ObstacleTrack-va
 python -m road_anomaly_benchmark metric SegEval-ObstacleTrack $methods ObstacleTrack-validation,LostAndFound-testNoKnown
 ```
 
-Use `--frame-vis` option to visualize anomaly scores (requires ground truth).
+#### Visualization
+
+The anomaly scores can be visualized by running with `--frame-vis-only` flag.
+
+```bash
+python -m road_anomaly_benchmark metric PixBinaryClass --frame-vis-only $methods $dsets
+```
+
+If ground truths are available, the `--frame-vis` option both evaluates the metric and generates visualizations with the ROI region marked.
 
 ### Plots and Tables
 
