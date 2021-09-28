@@ -2,7 +2,6 @@
 import dataclasses
 
 import numpy as np
-import os
 
 from easydict import EasyDict
 from scipy.ndimage.measurements import label
@@ -319,7 +318,7 @@ class MetricSegment(EvaluationMetric):
         return ResultsInfo.from_file(out_path)
 
     def fields_for_table(self):
-        return ['sIoU_gt', 'sIoU_pred', 'fn_25', 'fp_25', 'f1_25', 'fn_50', 'fp_50', 'f1_50',
+        return ['sIoU_gt', 'prec_pred', 'fn_25', 'fp_25', 'f1_25', 'fn_50', 'fp_50', 'f1_50',
                 'fn_75', 'fp_75', 'f1_75', 'f1_mean']
 
     def init(self, method_name, dataset_name):
