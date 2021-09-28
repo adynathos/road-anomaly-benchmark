@@ -139,10 +139,16 @@ class Evaluation:
 			dset = DatasetRegistry.get(dataset_name)
 			metric = MetricRegistry.get(metric_name)
 
+			frame_vis_only = frame_vis == 'only'
+
 			if default_instancer:
 				metric.init(method_name, dataset_name)
 
-			fr = dset[frame_idx]
+			if not frame_vis_only:
+				fr = dset[frame_idx]
+			else:
+				fr = dset.get_frame(frame_idx, 'image')
+
 			frame = {"method_name": method_name, "dset_name": fr.dset_name, "fid": fr.fid}
 			fr["mask_path"] = cls.channels['anomaly_mask_path'].format(**frame)
 
@@ -158,14 +164,23 @@ class Evaluation:
 			else:
 				heatmap = None
 
-			result = metric.process_frame(
-				anomaly_p = heatmap,
-				method_name = method_name, 
-				visualize = frame_vis,
-				**fr,
-			)
+			if not frame_vis_only:
+				result = metric.process_frame(
+					anomaly_p = heatmap,
+					method_name = method_name, 
+					visualize = frame_vis,
+					**fr,
+				)
+				return result
+			else:
+				h, w, _ = fr.image.shape
+				metric.vis_frame(
+					anomaly_p = heatmap,
+					method_name = method_name, 
+					mask_roi = np.ones((h, w), dtype=bool),
+					**fr,
+				)
 
-			return result
 		except Exception as e:
 			log.exception(f'Metric worker {e}')
 			raise e
