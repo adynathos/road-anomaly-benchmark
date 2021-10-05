@@ -242,7 +242,7 @@ class MetricSegment(EvaluationMetric):
             saves an image with segment predictions
         """
 
-        if self.cfg.default_instancer:
+        if self.cfg.get(default_instancer, True):
             anomaly_gt, anomaly_pred, mask = default_instancer(anomaly_p, label_pixel_gt, self.cfg.thresh_p,
                                                                self.cfg.thresh_segsize, self.cfg.thresh_instsize)
             # imwrite(_["mask_path"], mask)

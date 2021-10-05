@@ -209,8 +209,8 @@ class MetricPixelClassification(EvaluationMetric):
 			thresholds = thresholds,
 		)
 
-	#@staticmethod
-	def aggregate_dynamic_bins(self, frame_results):
+	@staticmethod
+	def aggregate_dynamic_bins(frame_results):
 
 		thresholds = np.concatenate([r.bin_edges[1:] for r in frame_results])
 
