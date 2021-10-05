@@ -43,8 +43,11 @@ class DatasetRA(DatasetBase):
 	def get_frame(self, key, *channels):
 
 		channels = set(channels)
+		wants_labels_explicitly = False
 		if 'label_pixel_gt' in channels:
+			wants_labels_explicitly = True
 			channels.remove('label_pixel_gt')
+			channels.add('semantic_class_gt')
 
 		fr = super().get_frame(key, *channels)
 
@@ -64,6 +67,9 @@ class DatasetRA(DatasetBase):
 			label[anomaly_mask] = 1
 
 			fr['label_pixel_gt'] = label
+		elif wants_labels_explicitly:
+			raise KeyError(f'No labels for {key} in {self}')
+
 
 		return fr
 
