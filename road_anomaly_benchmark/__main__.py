@@ -101,20 +101,23 @@ def comparison(comparison_name, method_names, metric_names, dataset_names, order
 		for metric_name in metric_names:
 			metric = MetricRegistry.get(metric_name)
 	
-			ags = [
-				metric.load(method_name = method, dataset_name = dset)
-				for method in method_names
-			]
+			ags = {}
+			for method in method_names:
+				try:
+					ags[method] = metric.load(method_name = method, dataset_name = dset)
+				except FileNotFoundError:
+					...
+				
 
 			if "PixBinaryClass" in metric_name:
 				metric.plot_many(
-					ags,
+					list(ags.values()),
 					f'{comparison_name}_{dset}',
 					method_names = rename_methods,
 					plot_formats = plot_formats,
 				)
 
-			for ag, method in zip(ags, method_names):
+			for method, ag in ags.items():
 				for f, v in metric.extracts_fields_for_table(ag).items():
 
 					ds = rename_dsets.get(dset, dset)
@@ -137,15 +140,12 @@ def comparison(comparison_name, method_names, metric_names, dataset_names, order
 
 	print(table)
 
-	float_format = lambda f: '-' if np.isnan(f) else f'{100*f:.01f}'
-
-	table_tex = table.to_latex(
-		float_format = float_format,
+	str_formats = dict(
+		float_format = lambda f: f'{100*f:.01f}',
+		na_rep = '-',
 	)
-
-	table_html = table.to_html(
-		float_format = float_format,
-	)
+	table_tex = table.to_latex(**str_formats)
+	table_html = table.to_html(**str_formats)
 
 	# json dump for website
 	table['method'] = table.index

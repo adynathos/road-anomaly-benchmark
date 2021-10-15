@@ -176,7 +176,7 @@ class ResultsInfo:
 
     sIoU_gt : float
     sIoU_pred : float
-    prec_pred : float
+    prec_pred : float = -1
 
     def __iter__(self):
         return dataclasses.asdict(self).items()
