@@ -56,6 +56,43 @@ def metric(method_names, metric_names, dataset_names, limit_length, parallel, fr
 					default_instancer = default_instancer,
 				)
 
+			
+
+
+COMPARISON_HTML_TEMPLATE = """
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta http-equiv="content-type" content="text/html; charset=utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title> {title} </title>
+	<link rel="stylesheet" href="https://cdn.datatables.net/1.11.3/css/jquery.dataTables.min.css">
+</head>
+<body>
+	{table}
+	<script src="https://code.jquery.com/jquery-3.6.0.slim.min.js" integrity="sha256-u7e5khyithlIdTpu22PHhENmPcRdFiHRjhAuHcs05RI=" crossorigin="anonymous"></script>
+	<script src="https://cdn.datatables.net/1.11.3/js/jquery.dataTables.min.js"></script>
+	<script>{script_src}</script> 
+</body>
+</html>
+"""
+
+COMPARISON_HTML_SCRIPT = """
+"use strict";
+$(document).ready(() => {
+	$('table').DataTable({
+		paging: false,
+	})
+})
+"""
+
+def wrap_html_table(table, title='Comparisong'):
+	# script has { brackets which don't play well with format
+	return COMPARISON_HTML_TEMPLATE.format(
+		table = table,
+		title = title,
+		script_src = COMPARISON_HTML_SCRIPT,
+	)
 
 @main.command()
 @click.argument('comparison_name', type=str)
@@ -145,7 +182,13 @@ def comparison(comparison_name, method_names, metric_names, dataset_names, order
 		na_rep = '-',
 	)
 	table_tex = table.to_latex(**str_formats)
-	table_html = table.to_html(**str_formats)
+	table_html = wrap_html_table(
+		table = table.to_html(
+			classes = ('display', 'compact'), 
+			**str_formats,
+		),
+		title = comparison_name,
+	)
 
 	# json dump for website
 	table['method'] = table.index
