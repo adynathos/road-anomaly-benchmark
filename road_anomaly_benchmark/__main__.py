@@ -204,4 +204,5 @@ def comparison(comparison_name, method_names, metric_names, dataset_names, order
 	out_f.with_suffix('.json').write_text(table_json)
 
 
-main()	
+if __name__ == '__main__':
+	main()
